@@ -12,19 +12,18 @@ Created on Thu Jul 22 17:30:10 2021
 
 import numpy as np
 
-from data_reader import data_reader 
-
-close_price = "Close Price"
-TS = "TS"
+date = "Date"
+open_price = "Open"
+high_price = "High"
+low_price = "Low"
+close_price = "Close"
 
 class add_stats:
     def ema(DF, period):
         df = DF.copy()
         col_name = 'EMA' + str(period)
         df[col_name] = df[close_price].ewm(span = period, min_periods = period).mean()
-        #df_copy.dropna(inplace = True)
-        #return df_copy
-        return DF.merge(df.loc[:, [TS, col_name]], how = "outer", on = TS)
+        return DF.merge(df.loc[:, [date, col_name]], how = "outer", on = date)
     
     def rsi(DF, n):
         df = DF.copy()
@@ -49,10 +48,4 @@ class add_stats:
         df['avg_loss'] = np.array(avg_loss)
         df['RS'] = df['avg_gain']/df['avg_loss']
         df['RSI'] = 100 - (100/(1+df['RS']))
-        return DF.merge(df.loc[:, [TS, 'RSI']], how = "outer", on = TS)
-    
-df = data_reader.read("Historical_data.xlsx", "June21")
-df = add_stats.ema(df, 3)
-df = add_stats.ema(df, 5)
-df = add_stats.rsi(df, 5)
-        
+        return DF.merge(df.loc[:, [date, 'RSI']], how = "outer", on = date)
