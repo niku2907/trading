@@ -13,8 +13,8 @@ Created on Thu Jul 22 17:06:52 2021
 import pandas as pd
 
 class data_reader:
-    def read(file_name, sheet_name):
-        return pd.read_excel(file_name, sheet_name)
+    def read(file_name):
+        return pd.read_excel(file_name)
     
-#exp1 = data_reader.read("Historical_data.xlsx", "June21")
+#exp1 = data_reader.read("Historical_data.xlsx")
 #exp2 = data_reader.read("Historical_data.xlsx", "July21")

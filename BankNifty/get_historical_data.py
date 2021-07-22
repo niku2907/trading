@@ -20,7 +20,7 @@ headers = {'authority':'kite.zerodha.com',\
            'accept':'application/json, text/plain, */*',\
            'authorization':'enctoken 5r8XZXo+mk3ZwtFfaFLXJC51UkD5yGa3IJSgPKgJ6+RkTuPoUxwpFWnn7wM8krHv6aTeT2NH5/zUJZIjtXxFdg8Q6bt4oXFKFx26wBYGH6AKYtsAxHlS+Q=='}
 
-counter = 50
+counter = 6
 
 start_date = datetime.date.today()-datetime.timedelta(counter*60)
 
@@ -47,4 +47,4 @@ for i in range(counter):
     
 df = pd.DataFrame(data)
 df.set_index('Date', inplace=True)
-df.to_excel("NIFTYBANK_HISTORICAL_DATA.xlsx")
+df.to_excel("NIFTYBANK_ONE_YEAR_DATA.xlsx")
