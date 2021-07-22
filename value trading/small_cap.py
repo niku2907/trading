@@ -8,40 +8,157 @@ Created on Sat May 16 02:14:58 2020
 
 from intrinsic_data import value_investing_data_getter
 
-tickers = ["ADFFOODS.BO",\
-            "APOLLO.BO",\
-            "ARVSMART.BO",\
-            "CENTURYPLY.BO",\
-            "CGCL.BO",\
-            "DBREALTY.BO",\
-            "DEEPALFERT.BO",\
-            "DFM.BO",\
-            "DHANUKA.BO",\
-            "FELDVR.BO",\
-            "GAYAPROJ.BO",\
-            "HIKAL.BO",\
-            "HLVLTD.BO",\
-            "INDIACEM.BO",\
-            "INOXWIND.BO",\
-            "JBMA.BO",\
-            "JISLDVREQS.BO",\
-            "JUBILANT.BO",\
-            "JISLJALEQS.BO",\
-            "KRIINFRA.BO",\
-            "MCLEODRUSS.BO",\
-            "MUKANDLTD.BO",\
-            "NFL.BO",\
-            "PROZONINTU.BO",\
-            "RANKY.BO",\
-            "RCF.BO",\
-            "SADBHAV.BO",\
-            "SALASAR.BO",\
-            "SANGHIIND.BO",\
-            "SEYAIND.BO",\
-            "SKIPPER.BO",\
-            "SPENCER.BO",\
-            "TAJGVK.BO",\
-            "ZENSARTECH.BO"]
+tickers = ["INDIACEM.BO",\
+"ESCORTS.BO",\
+"KALPATPOWR.BO",\
+"PVR.BO",\
+"NIITTECH.BO",\
+"EQUITAS.BO",\
+"STAR.BO",\
+"JUBLFOOD.BO",\
+"BATAINDIA.BO",\
+"LAXMIMACH.BO",\
+"TATAELXSI.BO",\
+"ARVIND.BO",\
+"JUSTDIAL.BO",\
+"KAJARIACER.BO",\
+"SPICEJET.BO",\
+"NOCIL.BO",\
+"UJJIVAN.BO",\
+"MANAPPURAM.BO",\
+"APLLTD.BO",\
+"DEEPAKNI.BO",\
+"SPENCER.BO",\
+"SUZLON.BO",\
+"IOLCP.BO",\
+"BEML.BO",\
+"HEXAWARE.BO",\
+"ADANIGAS.BO",\
+"HAWKINCOOK.BO",\
+"ASTRAZEN.BO",\
+"GODFRYPHLP.BO",\
+"CANFINHOME.BO",\
+"ARVINDFASN.BO",\
+"NATPEROX.BO",\
+"APOLLOTYRE.BO",\
+"DALBHARAT*.BO",\
+"VGUARD.BO",\
+"MINDTREE.BO",\
+"OMAXE.BO",\
+"MGL.BO",\
+"NCC.BO",\
+"SRF.BO",\
+"PHILIPCARB.BO",\
+"INOXLEISUR.BO",\
+"SPARC.BO",\
+"GMM.BO",\
+"ATULAUTO.BO",\
+"GRANULES.BO",\
+"GSPL.BO",\
+"COROMANDEL.BO",\
+"ASTEC.BO",\
+"MCX.BO",\
+"SUBEX.BO",\
+"IBULISL.BO",\
+"LAURUSLABS.BO",\
+"LEMONTREE.BO",\
+"WOCKPHARMA.BO",\
+"CESC.BO",\
+"CEATLTD.BO",\
+"TRENT.BO",\
+"DELTACORP*.BO",\
+"CGCL.BO",\
+"MIDHANI.BO",\
+"RADICO.BO",\
+"CHAMBLFERT.BO",\
+"RELAXO.BO",\
+"IBREALEST.BO",\
+"BALRAMCHIN.BO",\
+"HEG.BO",\
+"TVSSRICHAK.BO",\
+"POLYCAB.BO",\
+"STRTECH*.BO",\
+"QUESS.BO",\
+"GNFC.BO",\
+"JBCHEPHARM.BO",\
+"DCBBANK.BO",\
+"IPCALAB.BO",\
+"KIRIINDUS.BO",\
+"UFLEX.BO",\
+"AARTIDRUGS.BO",\
+"APOLLOTRI.BO",\
+"JUBILANT.BO",\
+"RAIN.BO",\
+"QUICKHEAL.BO",\
+"VSTIND.BO",\
+"LTTS.BO",\
+"HSCL.BO",\
+"BSOFT.BO",\
+"CIGNITI.BO",\
+"DLINKINDIA.BO",\
+"NAVINFLUOR.BO",\
+"PFIZER.BO",\
+"WABCOINDIA.BO",\
+"ADANIGREEN.BO",\
+"ASALCBR.BO",\
+"SHILPAMED.BO",\
+"SYNGENE.BO",\
+"JMFINANCIL.BO",\
+"TEJASNET.BO",\
+"AVANTI.BO",\
+"JKLAKSHMI.BO",\
+"ABBOTINDIA.BO",\
+"BIRLACORPN.BO",\
+"HEIDELBERG.BO",\
+"DHAMPURSUG.BO",\
+"SOUTHBANK.BO",\
+"RCF.BO",\
+"TV18BRDCST.BO",\
+"JAICORPLTD.BO",\
+"ALKYLAMINE.BO",\
+"SCHNEIDER.BO",\
+"RVNL.BO",\
+"SANOFI.BO",\
+"DEEPAKFERT.BO",\
+"TINPLATE.BO",\
+"GARFIBRES.BO",\
+"RITES.BO",\
+"RPOWER.BO",\
+"SCI.BO",\
+"BASF.BO",\
+"VIPIND.BO",\
+"JKTYRE.BO",\
+"BLISSGVS.BO",\
+"FERMENTA.BO",\
+"RESPONIND.BO",\
+"INDIAGLYCO.BO",\
+"DIXON.BO",\
+"NIITLTD.BO",\
+"DBL.BO",\
+"BALAMINES.BO",\
+"CYIENT.BO",\
+"GRAPHITE.BO",\
+"TRANSPEK.BO",\
+"RAYMOND.BO",\
+"SUDARSCHEM.BO",\
+"VINATIORGA.BO",\
+"FORTIS.BO",\
+"GPPL.BO",\
+"HFCL.BO",\
+"DBREALTY.BO",\
+"PRAJIND.BO",\
+"KTKBANK.BO",\
+"TRIVENI.BO",\
+"TRIDENT.BO",\
+"AMBIKCO.BO",\
+"SWANENERGY.BO",\
+"ALBERTDA.BO",\
+"ATUL.BO",\
+"LALPATHLAB.BO",\
+"SUNTECK.BO",\
+"CHENNPETRO.BO",\
+"SONATSOFTW.BO"
+    ]
 
 intersting_data_dict, tickers_collated_data, df_small_cap = value_investing_data_getter.get_interesting_data(tickers)
 df_small_cap.to_excel("small_cap.xls")                         

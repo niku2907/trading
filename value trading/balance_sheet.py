@@ -79,7 +79,7 @@ class balance_sheet_data_getter:
         self.common_stock = string_util.get_processed_data(driver.find_xpath(element_xpath = common_stk))
         print("Common stock: ", self.common_stock)
 
-# balance_sheet_url = 'http://financials.morningstar.com/balance-sheet/bs.html?t=' + '524715' + \
+#balance_sheet_url = 'http://financials.morningstar.com/balance-sheet/bs.html?t=' + '532523' + \
 #                                '&region=ind&culture=en-US&platform=sal'
-# balance_sheet = balance_sheet_data_getter(balance_sheet_url)
-# balance_sheet.get_data()
+#balance_sheet = balance_sheet_data_getter(balance_sheet_url)
+#balance_sheet.get_data()

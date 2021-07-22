@@ -8,16 +8,25 @@ Created on Sat May  2 18:23:23 2020
 
 import time 
 from selenium import webdriver
+from webdriver_manager.chrome import ChromeDriverManager
 
 class selenium_driver:
     def __init__(self, url, num_retries):
         self.url = url
         self.num_retries = num_retries
-        
+    
+    def get_driver(self):
+        driver = webdriver.Chrome(ChromeDriverManager().install())
+        return driver
+    
+    def get_driver_old():
+        driver = webdriver.Chrome('/Users/nishant.gupta/Downloads/chromedriver')
+        return driver
+    
     def find_xpath(self, element_xpath, click_xpath = ""):
         result = ""
         try:
-            driver = webdriver.Chrome('/Users/nishant.gupta/Downloads/chromedriver')
+            driver = self.get_driver()
             driver.implicitly_wait(20)
             driver.get(self.url)
             
@@ -53,7 +62,8 @@ class selenium_driver:
             
             driver.quit()
             return result
-        except :
+        except Exception as e:
+            print("Encountered exception: ", e)
             print("Got some error while finding " + element_xpath + " on url: " + self.url + \
                   " with click_xpath " + click_xpath)
             return result
@@ -65,7 +75,7 @@ class selenium_driver:
         content = ""
         ctr = 0
         while (ctr < self.num_retries):
-            driver = webdriver.Chrome('/Users/nishant.gupta/Downloads/chromedriver')
+            driver = self.get_driver()
             driver.implicitly_wait(10)
             driver.get(self.url)
             try:
@@ -87,7 +97,7 @@ class selenium_driver:
         result = ""
         ctr = 0
         while (ctr < self.num_retries):
-            driver = webdriver.Chrome('/Users/nishant.gupta/Downloads/chromedriver')
+            driver = self.get_driver()
             driver.implicitly_wait(10)
             driver.get(self.url)
             try:

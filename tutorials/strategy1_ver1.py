@@ -61,7 +61,7 @@ sell_params = DecisionParams(rsi_level = 45, min_obv_slope = -90, max_obv_slope 
 
 strategy = Strategy1(buy_params = buy_params, sell_params = sell_params, \
                      adx_threshold_for_fib_buy = 50, adx_threshold_for_fib_sell = 50, \
-                     enable_using_fib_retraction = True)
+                     enable_using_fib_retraction = False)
 
 strategy_runner = Strategy_Runner(strategy, tickers, interday_data, num_simultaneous_buy = 100)
 result = strategy_runner.Run()
