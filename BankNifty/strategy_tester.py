@@ -14,7 +14,7 @@ from data_reader import data_reader
 fast_ema = 10
 slow_ema = 50
 
-one_minute_data = data_reader.read("NIFTYBANK_ONE_YEAR_DATA.xlsx")
+one_minute_data = data_reader.read("Historical_Data.xlsx")
 five_minute_data = one_minute_data.iloc[::5]
 fifteen_minute_data = one_minute_data.iloc[::15]
 
