@@ -18,7 +18,7 @@ import datetime
 
 headers = {'authority':'kite.zerodha.com',\
            'accept':'application/json, text/plain, */*',\
-           'authorization':'enctoken 5r8XZXo+mk3ZwtFfaFLXJC51UkD5yGa3IJSgPKgJ6+RkTuPoUxwpFWnn7wM8krHv6aTeT2NH5/zUJZIjtXxFdg8Q6bt4oXFKFx26wBYGH6AKYtsAxHlS+Q=='}
+           'authorization':'enctoken bqr/mLik0CFGNQXs2jYY6UGqzfFhyGcJSI67vzYgpv6NMBhtPa9teGLuO01x11Ocwk+8BGnT9AcjC7geYzmyQwdciKrG77xiv+zA714OFXRMDLFK7zg9Cw=='}
 
 counter = 6
 
@@ -29,7 +29,7 @@ for i in range(counter):
     
     end_date = start_date + datetime.timedelta(60)
     print("Start: ", start_date, " End: ", end_date)
-    url = 'https://kite.zerodha.com/oms/instruments/historical/260105/minute?user_id=JB7207&oi=1&from=' +\
+    url = 'https://kite.zerodha.com/oms/instruments/historical/256265/minute?user_id=JB7207&oi=1&from=' +\
        str(start_date) + '&to=' + str(end_date)
     res = requests.get(url, headers = headers)
     json_data = json.loads(res.text)['data']['candles']
@@ -47,4 +47,4 @@ for i in range(counter):
     
 df = pd.DataFrame(data)
 df.set_index('Date', inplace=True)
-df.to_excel("NIFTYBANK_ONE_YEAR_DATA.xlsx")
+df.to_excel("NIFTY_ONE_YEAR_DATA.xlsx")
