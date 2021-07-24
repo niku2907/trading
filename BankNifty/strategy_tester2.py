@@ -19,13 +19,17 @@ diff_fast_slow_ema = 500
 
 target = 15
 sl = 15
-max_profit_loss_per_day = 150
+#max_profit_loss_per_day = 150
+lot_size = 25
+num_lots = 1
+max_pnl_per_lot = 150
+max_profit_loss_per_day = max_pnl_per_lot * num_lots * lot_size
 
 cut_off_time_to_start = '14:30:00'
 cut_off_time_to_close = '15:00:00'
 
 
-one_minute_data = data_reader.read("NIFTY_TWO_YEAR_DATA.xlsx")
+one_minute_data = data_reader.read("NIFTYBANK_ONE_YEAR_DATA.xlsx")
 five_minute_data = one_minute_data.iloc[::5]
 
 five_minute_data = add_stats.ema(five_minute_data, fast_ema)
@@ -73,6 +77,7 @@ for date, sell_signal in five_minute_dict['SellSignal'].items():
 
 last_transaction_date = ''
 total_pl = 0
+total_pnl_excluding_taxes = 0
 open_trade = False
 pl_dict = {}
 for transaction_date, value in five_minute_open_signal_dict.items():
@@ -80,7 +85,7 @@ for transaction_date, value in five_minute_open_signal_dict.items():
         if (transaction_date > last_transaction_date and open_trade == False and \
             util.get_time(transaction_date) < cut_off_time_to_start):
             if (util.check_if_val_within_limit(pl_dict, util.get_date(transaction_date),\
-                                               max_profit_loss_per_day)):
+                                               max_pnl_per_lot)):
                 open_trade = True
                 buy_date = transaction_date
                 buy_price = value['Open']
@@ -88,28 +93,37 @@ for transaction_date, value in five_minute_open_signal_dict.items():
                 buy_time = util.get_time(buy_date)
                 for sell_date, value in one_min_high_low_dict.items():
                    current_pnl = 0
+                   current_pnl_excluding_taxes = 0
                    if (sell_date > buy_date):
                        if (value['High'] >= buy_price + target):
                            print("Trade ended. Sold at: ", sell_date, " Price: ", value['High'])
-                           current_pnl = value['High'] - buy_price
+                           current_pnl = (util.get_pnl(buy_price, value['High'], num_lots, lot_size) /\
+                                          (lot_size * num_lots))
+                           current_pnl_excluding_taxes = value['High'] - buy_price
                            open_trade = False
                    
                        if (buy_price - value['Low'] >= sl):
                            print("SL hit. Sold at: ", sell_date, " Price: ", value['Low'])
-                           current_pnl = -sl
+                           current_pnl = (util.get_pnl(buy_price, buy_price - sl, num_lots, lot_size) /\
+                                          (lot_size * num_lots))
+                           current_pnl_excluding_taxes = -sl
                            open_trade = False
                     
                        # Auto square off if we are past cutoff time.
                        if (util.get_time(sell_date) > cut_off_time_to_close):
                            print("Auto squareoff. Sell date: ", sell_date, " Price: ", value['High'])
-                           current_pnl = value['High'] - buy_price
+                           current_pnl = (util.get_pnl(buy_price, value['High'], num_lots, lot_size) /\
+                                          (lot_size * num_lots))
+                           current_pnl_excluding_taxes = value['High'] - buy_price
                            open_trade = False
     
                        if open_trade == False:
                            last_transaction_date = sell_date
                            print("Logging pnl: ", current_pnl, " for day: ", util.get_date(buy_date))
-                           util.add_or_update_val_to_key(pl_dict, util.get_date(buy_date), current_pnl)
+                           util.add_or_update_val_to_key(pl_dict, util.get_date(buy_date),\
+                                                         current_pnl_excluding_taxes)
                            total_pl += current_pnl
+                           total_pnl_excluding_taxes += current_pnl_excluding_taxes
                            break
             else:
                 print("Daily limit reached for: ", util.get_date(transaction_date), " Pnl: ",\
@@ -119,7 +133,7 @@ for transaction_date, value in five_minute_open_signal_dict.items():
         if (transaction_date > last_transaction_date and open_trade == False and \
             util.get_time(transaction_date) < cut_off_time_to_start):
             if (util.check_if_val_within_limit(pl_dict, util.get_date(transaction_date),\
-                                               max_profit_loss_per_day)):
+                                               max_pnl_per_lot)):
                 open_trade = True
                 sell_date = transaction_date
                 sell_price = value['Open']
@@ -130,25 +144,33 @@ for transaction_date, value in five_minute_open_signal_dict.items():
                    if (buy_date > sell_date):
                        if (value['Low'] <= sell_price - target):
                            print("Trade ended. Buy at: ", buy_date, " Price: ", value['Low'])
-                           current_pnl = sell_price - value['Low']
+                           current_pnl = (util.get_pnl(value['Low'], sell_price, num_lots, lot_size) /\
+                                          (lot_size * num_lots))
+                           current_pnl_excluding_taxes = sell_price - value['Low']
                            open_trade = False
                    
                        if (value['High'] - sell_price >= sl):
                            print("SL hit. Buy at: ", buy_date, " Price: ", value['High'])
-                           current_pnl = -sl
+                           current_pnl = (util.get_pnl(sell_price + sl, sell_price, num_lots, lot_size) /\
+                                          (lot_size * num_lots))
+                           current_pnl_excluding_taxes = -sl
                            open_trade = False
                     
                        # Auto square off if we are past cutoff time.
                        if (util.get_time(buy_date) > cut_off_time_to_close):
                            print("Auto squareoff. Buy date: ", buy_date, " Price: ", value['Low'])
-                           current_pnl = sell_price - value['Low']
+                           current_pnl = (util.get_pnl(value['Low'], sell_price, num_lots, lot_size) /\
+                                          (lot_size * num_lots))
+                           current_pnl_excluding_taxes = sell_price - value['Low']
                            open_trade = False
     
                        if open_trade == False:
                            last_transaction_date = buy_date
                            print("Logging pnl: ", current_pnl, " for day: ", util.get_date(sell_date))
-                           util.add_or_update_val_to_key(pl_dict, util.get_date(sell_date), current_pnl)
+                           util.add_or_update_val_to_key(pl_dict, util.get_date(sell_date),\
+                                                         current_pnl_excluding_taxes)
                            total_pl += current_pnl
+                           total_pnl_excluding_taxes += current_pnl_excluding_taxes
                            break
             else:
                 print("Daily limit reached for: ", util.get_date(transaction_date), " Pnl: ",\
