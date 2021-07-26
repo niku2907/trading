@@ -197,6 +197,8 @@ for transaction_date, value in five_minute_open_signal_dict.items():
                                   'EndTS':buy_date, 'End Price': buy_price, 'Pnl_taxed':current_pnl,\
                                   'Pnl_untaxed':current_pnl_excluding_taxes}
                            transactions.append(row)
+                           total_pl += current_pnl
+                           total_pnl_excluding_taxes += current_pnl_excluding_taxes
                            break
             else:
                 print("Daily limit reached for: ", util.get_date(transaction_date), " Pnl: ",\
