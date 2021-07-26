@@ -22,9 +22,12 @@ class util:
         else:
             dictionary[key] = val
             
-    def check_if_val_within_limit(dictionary, key, limit):
+    def check_if_val_within_limit(dictionary, key, up_limit, down_limit):
         if (dictionary.__contains__(key)):
-            return abs(dictionary[key]) < limit
+            #return abs(dictionary[key]) < up_limit
+        
+            return (dictionary[key] < 0 and abs(dictionary[key]) < down_limit) or\
+                (dictionary[key] > 0 and dictionary[key] < up_limit)
         
         return True
         
