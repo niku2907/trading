@@ -10,6 +10,7 @@ Created on Thu Jul 22 17:30:10 2021
 # This class add the stats for the passed DF 'Close Price' column based
 # request params if any.
 
+import pandas as pd
 import numpy as np
 
 date = "Date"
@@ -19,6 +20,14 @@ low_price = "Low"
 close_price = "Close"
 rsi = "RSI"
 
+class candle:
+    def __init__(self, open_price, high_price, low_price, close_price):
+        self.open_price = open_price
+        self.high_price = high_price
+        self.low_price = low_price
+        self.close_price = close_price
+        
+        
 class add_stats_helper:        
     def compare(self, price, fast_ema, diff):
         return abs(price - fast_ema) < diff
@@ -44,12 +53,155 @@ class add_stats_helper:
         signal = cond1 and cond2 and cond3 and cond4 and cond5
         return signal
     
+    def is_candidate_for_parent_candle(self, test_candle, threshold):
+        if (self.is_red_candle(test_candle)):
+            return test_candle.open_price - test_candle.close_price >= threshold
+        else:
+            return test_candle.close_price - test_candle.open_price >= threshold
+    
+    def is_red_candle(self, test_candle):
+        return test_candle.close_price < test_candle.open_price
+    
+    def is_candidate_for_child_candle(self, child_candle, parent_candle):
+        if (child_candle.low_price > parent_candle.low_price and \
+            child_candle.high_price < parent_candle.high_price):
+            return True
+        else:
+            return False
+
 class add_stats:
     def ema(DF, period):
         df = DF.copy()
         col_name = 'EMA' + str(period)
         df[col_name] = df[close_price].ewm(span = period, min_periods = period).mean()
         return DF.merge(df.loc[:, [date, col_name]], how = "outer", on = date)
+    
+    # SUPERTREND CALCULATION
+    def get_supertrend(high, low, close, lookback, multiplier):
+        
+        # ATR
+        
+        tr1 = pd.DataFrame(high - low)
+        tr2 = pd.DataFrame(abs(high - close.shift(1)))
+        tr3 = pd.DataFrame(abs(low - close.shift(1)))
+        frames = [tr1, tr2, tr3]
+        tr = pd.concat(frames, axis = 1, join = 'inner').max(axis = 1)
+        atr = tr.ewm(lookback).mean()
+        # H/L AVG AND BASIC UPPER & LOWER BAND
+        
+        hl_avg = (high + low) / 2
+        upper_band = (hl_avg + multiplier * atr).dropna()
+        lower_band = (hl_avg - multiplier * atr).dropna()
+        
+        # FINAL UPPER BAND
+        
+        final_bands = pd.DataFrame(columns = ['upper', 'lower'])
+        final_bands.iloc[:,0] = [x for x in upper_band - upper_band]
+        final_bands.iloc[:,1] = final_bands.iloc[:,0]
+        
+        for i in range(len(final_bands)):
+            if i == 0:
+                final_bands.iloc[i,0] = 0
+            else:
+                if (upper_band[i] < final_bands.iloc[i-1,0]) | (close[i-1] > final_bands.iloc[i-1,0]):
+                    final_bands.iloc[i,0] = upper_band[i]
+                else:
+                    final_bands.iloc[i,0] = final_bands.iloc[i-1,0]
+        
+        # FINAL LOWER BAND
+        
+        for i in range(len(final_bands)):
+            if i == 0:
+                final_bands.iloc[i, 1] = 0
+            else:
+                if (lower_band[i] > final_bands.iloc[i-1,1]) | (close[i-1] < final_bands.iloc[i-1,1]):
+                    final_bands.iloc[i,1] = lower_band[i]
+                else:
+                    final_bands.iloc[i,1] = final_bands.iloc[i-1,1]
+        
+        # SUPERTREND
+        
+        supertrend = pd.DataFrame(columns = [f'supertrend_{lookback}'])
+        supertrend.iloc[:,0] = [x for x in final_bands['upper'] - final_bands['upper']]
+        for i in range(len(supertrend)):
+            if i == 0:
+                supertrend.iloc[i, 0] = 0
+            elif supertrend.iloc[i-1, 0] == final_bands.iloc[i-1, 0] and close[i] < final_bands.iloc[i, 0]:
+                supertrend.iloc[i, 0] = final_bands.iloc[i, 0]
+            elif supertrend.iloc[i-1, 0] == final_bands.iloc[i-1, 0] and close[i] > final_bands.iloc[i, 0]:
+                supertrend.iloc[i, 0] = final_bands.iloc[i, 1]
+            elif supertrend.iloc[i-1, 0] == final_bands.iloc[i-1, 1] and close[i] > final_bands.iloc[i, 1]:
+                supertrend.iloc[i, 0] = final_bands.iloc[i, 1]
+            elif supertrend.iloc[i-1, 0] == final_bands.iloc[i-1, 1] and close[i] < final_bands.iloc[i, 1]:
+                supertrend.iloc[i, 0] = final_bands.iloc[i, 0]
+        
+        supertrend = supertrend.set_index(upper_band.index)
+        # TODO(Nishant): Debug as to why do we need following line.
+        #supertrend = supertrend.dropna()[1:]
+        
+        # ST UPTREND/DOWNTREND
+        
+        upt = []
+        dt = []
+        close = close.iloc[len(close) - len(supertrend):]
+        for i in range(len(supertrend)):
+            if close[i] > supertrend.iloc[i, 0]:
+                upt.append(supertrend.iloc[i, 0])
+                dt.append(np.nan)
+            elif close[i] < supertrend.iloc[i, 0]:
+                upt.append(np.nan)
+                dt.append(supertrend.iloc[i, 0])
+            else:
+                upt.append(np.nan)
+                dt.append(np.nan)
+          
+        st, upt, dt = pd.Series(supertrend.iloc[:, 0]), pd.Series(upt), pd.Series(dt)
+        upt.index, dt.index = supertrend.index, supertrend.index
+        
+        return st, upt, dt
+    
+    # SUPERTREND STRATEGY
+    def implement_st_strategy(prices, st):
+        buy_price = []
+        sell_price = []
+        st_signal = []
+        signal = 0
+        
+        for i in range(len(st)):
+            if i <= 1:
+                buy_price.append(np.nan)
+                sell_price.append(np.nan)
+                st_signal.append(np.nan)
+                continue
+            
+            if st[i-1] > prices[i-1] and st[i] < prices[i]:
+                if signal != 1:
+                    # Ideally buy price should be opening price of the next candle.
+                    buy_price.append(prices[i])
+                    sell_price.append(np.nan)
+                    signal = 1
+                    st_signal.append(signal)
+                else:
+                    buy_price.append(np.nan)
+                    sell_price.append(np.nan)
+                    st_signal.append(0)
+            elif st[i-1] < prices[i-1] and st[i] > prices[i]:
+                # Ideally sell price should be opening price of the next candle.
+                if signal != -1:
+                    buy_price.append(np.nan)
+                    sell_price.append(prices[i])
+                    signal = -1
+                    st_signal.append(signal)
+                else:
+                    buy_price.append(np.nan)
+                    sell_price.append(np.nan)
+                    st_signal.append(0)
+            else:
+                buy_price.append(np.nan)
+                sell_price.append(np.nan)
+                st_signal.append(0)
+    
+        return buy_price, sell_price, st_signal 
     
     def rsi(DF, n):
         df = DF.copy()
@@ -77,9 +229,88 @@ class add_stats:
         return DF.merge(df.loc[:, [date, 'RSI']], how = "outer", on = date)
 
     
+    def inside_candle_info(DF, parent_candle_length):
+        helper = add_stats_helper()
+        df = DF.copy()
+        df.reset_index(inplace = True)
+        close_price_series = df[close_price]
+        open_price_series = df[open_price]
+        high_price_series = df[high_price]
+        low_price_series = df[low_price]
+        
+        parent_candle_candidates = []
+        child_candle_candidates = []
+        candle_color = []
+        child_candle_trigger_price = []
+        child_candle_direction = []
+        child_candle_sl = []
+        child_candle_target = []
+        for i in range(0, len(close_price_series)):
+            current_candle = candle(open_price = open_price_series[i],\
+                                    high_price = high_price_series[i],\
+                                    low_price = low_price_series[i],\
+                                    close_price = close_price_series[i])
+            parent_candle_candidates.append(helper.is_candidate_for_parent_candle(current_candle,\
+                                                                                  parent_candle_length))
+            if (helper.is_red_candle(current_candle) == True):
+                candle_color.append('Red')
+            else:
+                candle_color.append('Green')
+            
+            child_candle_candidates.append(False)
+            child_candle_trigger_price.append(-1)
+            child_candle_direction.append('NA')
+            child_candle_sl.append(-1)
+            child_candle_target.append(-1)
+
+        for i in range(0, len(parent_candle_candidates)):
+            if (parent_candle_candidates[i] == True):
+                # If next candle is also a candidate for being a parent we ignore this candle.
+                if (i+1 < len(parent_candle_candidates)):
+                    if (parent_candle_candidates[i+1] == True):
+                        continue
+                parent_candle = candle(open_price = open_price_series[i],\
+                                    high_price = high_price_series[i],\
+                                    low_price = low_price_series[i],\
+                                    close_price = close_price_series[i])
+                for j in range(i+1, len(close_price_series)):
+                    current_candle = candle(open_price = open_price_series[j],\
+                                    high_price = high_price_series[j],\
+                                    low_price = low_price_series[j],\
+                                    close_price = close_price_series[j])
+                    child_candle_candidates[j] = helper.is_candidate_for_child_candle(current_candle, parent_candle)
+                    if (child_candle_candidates[j] == False):
+                        break
+                    else:
+                        if (helper.is_red_candle(parent_candle)):
+                            child_candle_trigger_price[j] = parent_candle.low_price
+                            child_candle_direction[j] = 'Short'
+                            child_candle_sl[j] = current_candle.high_price + 10
+                            child_candle_target[j] = parent_candle.high_price - parent_candle.low_price
+                        else:
+                            child_candle_trigger_price[j] = parent_candle.high_price
+                            child_candle_direction[j] = 'Long'
+                            child_candle_sl[j] = current_candle.low_price - 10
+                            child_candle_target[j] = parent_candle.high_price - parent_candle.low_price
+
+        for i in range(0, len(child_candle_candidates)):
+            if (child_candle_candidates[i] == True and 0):
+                print("Found inside candle.")
+        
+        df['IsParent'] = np.array(parent_candle_candidates)
+        df['IsChild'] = np.array(child_candle_candidates)
+        df['Color'] = np.array(candle_color)
+        df['TP'] = np.array(child_candle_trigger_price)
+        df['Signal'] = np.array(child_candle_direction)
+        df['SL'] = np.array(child_candle_sl)
+        df['Target'] = np.array(child_candle_target)
+        return DF.merge(df.loc[:, [date, 'IsParent', 'IsChild', 'Color',\
+                                   'TP', 'Signal', 'SL', 'Target']], how = "outer", on = date)
+        
     def buy(DF, fast_ema_col_name, slow_ema_col_name, diff_price_fast_ema, diff_fast_slow_ema):
         helper = add_stats_helper()
         df = DF.copy()
+        df.reset_index(inplace = True)
         close_price_series = df[close_price]
         fast_ema_series = df[fast_ema_col_name]
         slow_ema_series = df[slow_ema_col_name]
@@ -88,7 +319,7 @@ class add_stats:
         
         # First check based on close price and populate 'BuyCP' column
         buy_cp = []
-        for i in range(len(close_price_series)):
+        for i in range(0, len(close_price_series)):
             buy_cp.append(helper.can_buy(close_price_series[i], fast_ema_series[i],\
                                                   slow_ema_series[i], rsi_series[i],\
                                                   diff_price_fast_ema, diff_fast_slow_ema))
@@ -108,6 +339,7 @@ class add_stats:
     def sell(DF, fast_ema_col_name, slow_ema_col_name, diff_price_fast_ema, diff_fast_slow_ema):
         helper = add_stats_helper()
         df = DF.copy()
+        df.reset_index(inplace = True)
         close_price_series = df[close_price]
         fast_ema_series = df[fast_ema_col_name]
         slow_ema_series = df[slow_ema_col_name]
@@ -116,7 +348,7 @@ class add_stats:
         
         # First check based on close price and populate 'BuyCP' column
         sell_cp = []
-        for i in range(len(close_price_series)):
+        for i in range(0, len(close_price_series)):
             sell_cp.append(helper.can_sell(close_price_series[i], fast_ema_series[i],\
                                                   slow_ema_series[i], rsi_series[i],\
                                                   diff_price_fast_ema, diff_fast_slow_ema))

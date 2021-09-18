@@ -28,7 +28,14 @@ class util:
         
             return (dictionary[key] < 0 and abs(dictionary[key]) < down_limit) or\
                 (dictionary[key] > 0 and dictionary[key] < up_limit)
+            #if (dictionary[key] < 0):
+            #    return abs(dictionary[key]) < down_limit
         
+        return True
+    
+    def check_if_trades_limit_not_reached(dictionary, key, limit):
+        if (dictionary.__contains__(key)):
+            return dictionary[key] < limit
         return True
         
     def get_pnl(buy_price, sell_price, num_lots, lot_size):
