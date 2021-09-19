@@ -18,7 +18,7 @@ import datetime
 
 headers = {'authority':'kite.zerodha.com',\
            'accept':'application/json, text/plain, */*',\
-           'authorization':'enctoken HaUCaGAdOXBqSLv4b1b2bwP/U0s9fqrpGFTqCqGhJW4d3TQHjBkeXA/Y3aD3U01gxmFQZ15sN8a+cJ3naNTaiPUX2uHTkdroKcQmlKwIqWMqg8Mipwblbw=='}
+           'authorization':'enctoken scyYSypPvfDD1qh4l8GpQieRq3qND0z6gFLX7fpKvMO4LGwqmmM3uuj/JN/wzYhpriQicPfxeNZArK+j6t8v5RPbJ08OHmaMebFgV1H9/1ixId+qiYaVRw=='}
 
 # url = 'https://kite.zerodha.com/oms/instruments/historical/260105/minute?user_id=JB7207&oi=1&from=2021-07-01&to=2021-08-04'
 # res = requests.get(url, headers = headers)
@@ -38,7 +38,7 @@ headers = {'authority':'kite.zerodha.com',\
 # df.set_index('Date', inplace=True)
 # df.to_excel("NIFTYBANK_ONE_MONTH_1_MINUTE_DATA.xlsx")
 
-counter = 36
+counter = 1
 
 start_date = datetime.date.today()-datetime.timedelta(counter*60)
 
@@ -47,7 +47,7 @@ for i in range(counter):
     
     end_date = start_date + datetime.timedelta(60)
     print("Start: ", start_date, " End: ", end_date)
-    url = 'https://kite.zerodha.com/oms/instruments/historical/260105/5minute?user_id=JB7207&oi=1&from=' +\
+    url = 'https://kite.zerodha.com/oms/instruments/historical/136247044/5minute?user_id=JB7207&oi=1&from=' +\
         str(start_date) + '&to=' + str(end_date)
     res = requests.get(url, headers = headers)
     json_data = json.loads(res.text)['data']['candles']
@@ -65,4 +65,4 @@ for i in range(counter):
     
 df = pd.DataFrame(data)
 df.set_index('Date', inplace=True)
-df.to_excel("NIFTYBANK_SIX_YEAR_5_MINUTE_DATA.xlsx")
+df.to_excel("AXIS_TWO_MONTH_5_MINUTE_DATA.xlsx")
