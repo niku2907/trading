@@ -111,3 +111,27 @@ name_zerodha_nse_id_dict = dict({"3861249":"ADANIPORT",\
                                  "4278529":"UBL",\
                                  "2674433":"MCDOWELL",\
                                  "4843777":"VBL"})
+    
+shortlisted_tickers_dict = ({    "81153":"BAJFINANCE",\
+                                 "4268801":"BAJAJFINSV",\
+                                 "2714625":"BHARTI-AIRTEL",\
+                                 "225537":"DRREDDY",\
+                                 "232961":"EICHERMOT",\
+                                 "1850625":"HCLTECH",\
+                                 "348929":"HINDALCO",\
+                                 "4632577":"JUBLFOODS",\
+                                 "4561409":"LTI",\
+                                 "519937":"M&M",\
+                                 "2674433":"MCDOWELL",\
+                                 "3675137":"MINDTREE",\
+                                 "1152769":"MPHASIS",\
+                                 "4598529":"NESTLE",\
+                                 "3725313":"PHOENIXLTD",\
+                                 "5197313":"PRESTIGE",\
+                                 "779521":"SBIN",\
+                                 "794369":"SHREECEM",\
+                                 "4516097":"SUNTECK",\
+                                 "2953217":"TCS",\
+                                 "3465729":"TECHM",\
+                                 "4278529":"UBL",\
+                                 "2952193":"ULTRACEM"})
