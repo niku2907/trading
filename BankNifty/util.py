@@ -16,6 +16,10 @@ class util:
         # data = '2020-07-28T15:25:00+0530'
         return data.split('T')[1].split('+')[0]
     
+    def get_date_time(data):
+        # data = '2020-07-28T15:25:00+0530'
+        return data.split('+')[0]
+    
     def add_or_update_val_to_key(dictionary, key, val):
         if (dictionary.__contains__(key)):
             dictionary[key] += val;
