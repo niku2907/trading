@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Sun Sep 19 20:33:34 2021
+Created on Wed Sep 29 21:07:39 2021
 
 @author: nishant.gupta
 """
@@ -9,14 +9,12 @@ Created on Sun Sep 19 20:33:34 2021
 import math
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
 
 from util import util
 
-class super_trend_utils:
+class custom_strategy_util:
     # SUPERTREND CALCULATION
-    def get_supertrend(high, low, close, lookback, multiplier):
-        
+    def get_supertrend(high, low, close, lookback, multiplier):       
         # ATR
         tr1 = pd.DataFrame(high - low)
         tr2 = pd.DataFrame(abs(high - close.shift(1)))
@@ -131,8 +129,8 @@ class super_trend_utils:
         if (buy_price > sell_price):
             message = "Loss of: " + str(buy_price - sell_price)
         
-        super_trend_utils.print_debug_log(message, 0)
-        return super_trend_utils.get_pnl_including_taxes(buy_price, sell_price, 1, num_units)
+        custom_strategy_util.print_debug_log(message, 0)
+        return custom_strategy_util.get_pnl_including_taxes(buy_price, sell_price, 1, num_units)
     
     @staticmethod
     def print_debug_log(message, level):
@@ -179,25 +177,32 @@ class super_trend_utils:
                 continue
             
             message = "Using MACD of Date: " + str(date_list[i-1])
-            super_trend_utils.print_debug_log(message, 0)
+            custom_strategy_util.print_debug_log(message, 0)
             if (macd_list[i-1] > macd_signal_list[i-1]):
                 return "BUY"
             else:
                 return "SELL"
         return "NA"
-                 
-    # SUPERTREND STRATEGY
+    
     @staticmethod
-    def implement_st_strategy(data, have_cut_off_time_check, ema_period, target_pct,\
-                              sl_pct, longer_tf):
+    def update_wins_data(pos_type, pnl, num_buy_wins, num_sell_wins):
+        if (pnl > 0):
+            if (pos_type == "BUY"):
+                num_buy_wins += 1
+            elif (pos_type == "SELL"):
+                num_sell_wins += 1
+        
+        return num_buy_wins, num_sell_wins
+            
+    def implement_strategy(data, buy_sl_pct, buy_dates, ema_period, sell_sl_pct, longer_tf,\
+                           buy_allowed, sell_allowed):
         prices = data['Close']
-        st = data['st']
         date = data['Date']
+        st = data['st']
         ema = data['EMA' + str(ema_period)]
         high_prices = data['High']
         low_prices = data['Low']
         open_prices = data['Open']
-        
         macd = longer_tf['MACD']
         macd_signal = longer_tf['MACD_Signal']
         
@@ -223,56 +228,66 @@ class super_trend_utils:
         num_units_list = []
         current_capital_list = []
         
-        status_list = ['NA' for i in range(len(st))]
-        signal_list = ['NA' for i in range(len(st))]
+        status_list = ['NA' for i in range(len(data))]
+        signal_list = ['NA' for i in range(len(data))]
         
         initial_capital = 100000
         num_units = 0
-        for i in range(len(st)):
-            if i <= 1:
-                # buy_price.append(np.nan)
-                # sell_price.append(np.nan)
-                # st_signal.append(np.nan)
+        last_trade_ctr = -1
+        last_trade_date = ""
+        dynamic_sl = 1
+        
+        num_sells = 0
+        num_sell_wins = 0
+        num_buys = 0
+        num_buy_wins = 0
+        
+        for i in range(len(data)):
+            if (i <= last_trade_ctr or i <= 1):
                 continue
             
             current_time = util.get_time(date[i])
             
             # Check if autosqaure off needed.
-            if (have_cut_off_time_check == 1):
-                if (current_time >= cut_off_time_to_close):
-                    if (is_open_pos == 1):
-                        pos_type = "BUY"
-                        exit_method = "Cutoff BUY"
-                        if (open_pos_type == "BUY"):
-                            pos_sell_price = prices[i]
-                            message = "Autosquare off initiated. Sell price: " + str(pos_sell_price)
-                            super_trend_utils.print_debug_log(message, 0)
-                            open_pos_type = ""
-                            is_open_pos = 0
-                            status_list[i] = "[Cutoff] SELL"
-                            sell_time = date[i]
-                            exit_method = "Cutoff SELL"
-                        else:
-                            pos_buy_price = prices[i]
-                            message = "Autosquare off initiated. Buy price: " + str(pos_buy_price)
-                            super_trend_utils.print_debug_log(message, 0)
-                            open_pos_type = ""
-                            is_open_pos = 0
-                            status_list[i] = "[Cutoff] BUY"
-                            buy_time = date[i]
-                            pos_type = "SELL"
+            if (current_time >= cut_off_time_to_close):
+                if (is_open_pos == 1):
+                    pos_type = "BUY"
+                    exit_method = "Cutoff BUY"
+                    if (open_pos_type == "BUY"):
+                        pos_sell_price = prices[i]
+                        message = "Autosquare off initiated. Sell price: " + str(pos_sell_price)
+                        custom_strategy_util.print_debug_log(message, 0)
+                        open_pos_type = ""
+                        is_open_pos = 0
+                        status_list[i] = "[Cutoff] SELL"
+                        sell_time = date[i]
+                        exit_method = "Cutoff SELL"
                         
-                        current_pnl = super_trend_utils.get_pnl(pos_buy_price, pos_sell_price, num_units)
-                        total_pnl += current_pnl
-                        initial_capital += current_pnl
-                        super_trend_utils.update_transaction_record(pos_buy_price, buy_time,\
-                                            pos_sell_price, sell_time,\
-                                            buy_price_list, buy_time_list,\
-                                            sell_price_list, sell_time_list,\
-                                            pos_type, position_type_list, current_pnl, pnl_list,\
-                                            exit_method, exit_method_list, num_units, num_units_list,\
-                                            initial_capital/1000, current_capital_list)
-                    continue
+                    else:
+                        pos_buy_price = prices[i]
+                        message = "Autosquare off initiated. Buy price: " + str(pos_buy_price)
+                        custom_strategy_util.print_debug_log(message, 0)
+                        open_pos_type = ""
+                        is_open_pos = 0
+                        status_list[i] = "[Cutoff] BUY"
+                        buy_time = date[i]
+                        pos_type = "SELL"
+                    
+                    current_pnl = custom_strategy_util.get_pnl(pos_buy_price, pos_sell_price, num_units)
+                    num_buy_wins, num_sell_wins = custom_strategy_util.update_wins_data(pos_type,\
+                                                                                        current_pnl,\
+                                                                                        num_buy_wins,\
+                                                                                        num_sell_wins)
+                    total_pnl += current_pnl
+                    initial_capital += current_pnl
+                    custom_strategy_util.update_transaction_record(pos_buy_price, buy_time,\
+                                        pos_sell_price, sell_time,\
+                                        buy_price_list, buy_time_list,\
+                                        sell_price_list, sell_time_list,\
+                                        pos_type, position_type_list, current_pnl, pnl_list,\
+                                        exit_method, exit_method_list, num_units, num_units_list,\
+                                        initial_capital/1000, current_capital_list)
+                continue
             
             if (is_open_pos == 1):
                 if (open_pos_type == "BUY"):
@@ -280,43 +295,37 @@ class super_trend_utils:
                     exit_method = ""
                     # Check if SL hit.
                     if (low_prices[i] <= sl_price):
-                        pos_sell_price = low_prices[i]
+                        pos_sell_price = sl_price
                         message = "[SL] Closing position. Time: " + str(date[i]) + " Buy Price: " +\
                             str(pos_buy_price) + " Sell Price: " + str(pos_sell_price)
-                        super_trend_utils.print_debug_log(message, 0)
+                        custom_strategy_util.print_debug_log(message, 0)
                         can_close_pos = 1
                         status_list[i] = "[SL] SELL"
                         exit_method = "SL SELL"
+                        
                     # Check if target achieved.
                     elif (high_prices[i] >= target_price):
                         pos_sell_price = target_price
                         message = "[Target] Closing position. Time: " + str(date[i]) + " Buy Price: " +\
                             str(pos_buy_price) + " Sell Price: " + str(pos_sell_price)
-                        super_trend_utils.print_debug_log(message, 0)
+                        custom_strategy_util.print_debug_log(message, 0)
                         can_close_pos = 1
                         status_list[i] = "[Target] SELL"
                         exit_method = "Target SELL"
-                    # Check if ST signal changed.
-                    elif (super_trend_utils.can_sell(st[i-1], prices[i-1], st[i], prices[i], ema[i]) and\
-                          super_trend_utils.get_signal_based_on_macd(macd, macd_signal,\
-                                                          longer_tf['Date'], date[i]) == "SELL"):
-                        pos_sell_price = prices[i]
-                        message = "[ST] Closing position. Time: " + str(date[i]) + " Buy Price: " +\
-                            str(pos_buy_price) + " Sell Price: " + str(pos_sell_price)
-                        super_trend_utils.print_debug_log(message, 0)
-                        can_close_pos = 1
-                        status_list[i] = "[ST] SELL"
-                        exit_method = "ST SELL"
 
                     if (can_close_pos == 1):
                         sell_time = date[i]
                         is_open_pos = 0
                         open_pos_type = "NA"
-                        current_pnl = super_trend_utils.get_pnl(pos_buy_price,\
+                        current_pnl = custom_strategy_util.get_pnl(pos_buy_price,\
                                                                pos_sell_price, num_units)
+                        num_buy_wins, num_sell_wins = custom_strategy_util.update_wins_data("BUY",\
+                                                                                        current_pnl,\
+                                                                                        num_buy_wins,\
+                                                                                        num_sell_wins)
                         total_pnl += current_pnl
                         initial_capital += current_pnl
-                        super_trend_utils.update_transaction_record(pos_buy_price, buy_time,\
+                        custom_strategy_util.update_transaction_record(pos_buy_price, buy_time,\
                                             pos_sell_price, sell_time,\
                                             buy_price_list, buy_time_list,\
                                             sell_price_list, sell_time_list,\
@@ -326,12 +335,13 @@ class super_trend_utils:
                 elif (open_pos_type == "SELL"):
                     can_close_pos = 0
                     exit_method = ""
+                    
                     # Check if SL hit.
                     if (high_prices[i] >= sl_price):
-                        pos_buy_price = high_prices[i]
+                        pos_buy_price = sl_price
                         message = "[SL] Closing position. Time: " + str(date[i]) + " Buy Price: " +\
                             str(pos_buy_price) + " Sell Price: " + str(pos_sell_price)
-                        super_trend_utils.print_debug_log(message, 0)
+                        custom_strategy_util.print_debug_log(message, 0)
                         can_close_pos = 1
                         status_list[i] = "[SL] BUY"
                         exit_method = "SL BUY"
@@ -339,31 +349,24 @@ class super_trend_utils:
                         pos_buy_price = target_price
                         message = "[Target] Closing position. Time: " + str(date[i]) + " Buy Price: " +\
                             str(pos_buy_price) + " Sell Price: " + str(pos_sell_price)
-                        super_trend_utils.print_debug_log(message, 0)
+                        custom_strategy_util.print_debug_log(message, 0)
                         can_close_pos = 1
                         status_list[i] = "[Target] BUY"
                         exit_method = "Target BUY"
-                    # Check if ST signal changed.
-                    elif (super_trend_utils.can_buy(st[i-1], prices[i-1], st[i], prices[i], ema[i]) and\
-                          super_trend_utils.get_signal_based_on_macd(macd, macd_signal,\
-                                                          longer_tf['Date'], date[i]) == "BUY"):
-                        pos_buy_price = prices[i]
-                        message = "[ST] Closing position. Time: " + str(date[i]) + " Buy Price: " +\
-                            str(pos_buy_price) + " Sell Price: " + str(pos_sell_price)
-                        super_trend_utils.print_debug_log(message, 0)
-                        can_close_pos = 1
-                        status_list[i] = "[ST] BUY"
-                        exit_method = "ST BUY"
                         
                     if (can_close_pos == 1):
                         buy_time = date[i]
                         is_open_pos = 0
                         open_pos_type = "NA"
-                        current_pnl = super_trend_utils.get_pnl(pos_buy_price,\
+                        current_pnl = custom_strategy_util.get_pnl(pos_buy_price,\
                                                                pos_sell_price, num_units)
+                        num_buy_wins, num_sell_wins = custom_strategy_util.update_wins_data("SELL",\
+                                                                                        current_pnl,\
+                                                                                        num_buy_wins,\
+                                                                                        num_sell_wins)
                         total_pnl += current_pnl
                         initial_capital += current_pnl
-                        super_trend_utils.update_transaction_record(pos_buy_price, buy_time,\
+                        custom_strategy_util.update_transaction_record(pos_buy_price, buy_time,\
                                             pos_sell_price, sell_time,\
                                             buy_price_list, buy_time_list,\
                                             sell_price_list, sell_time_list,\
@@ -372,71 +375,94 @@ class super_trend_utils:
                                             initial_capital/1000, current_capital_list)
                 continue
             
-            # Check if we can open a new position.      
+            # Check if we can open a new position.                                     
             if (current_time > cut_off_time_to_start):
                 message = "Not trying to initate a new trade after cutoff time."
-                super_trend_utils.print_debug_log(message, 0)
+                custom_strategy_util.print_debug_log(message, -1)
                 continue
-                               
-            if (super_trend_utils.can_buy(st[i-1], prices[i-1], st[i], prices[i],\
-                                          ema[i]) and\
-                super_trend_utils.get_signal_based_on_macd(macd, macd_signal,\
-                                                          longer_tf['Date'], date[i]) == "BUY") :
-                signal_list[i] = "BUY"
-                potential_sl = prices[i] - st[i]
-                allowed_sl = prices[i] * sl_pct / 100
-                if (potential_sl > allowed_sl):
-                    message = "SL needed is not in the limits."
-                    super_trend_utils.print_debug_log(message, 0)
+            
+            current_date = util.get_date(date[i])
+            if (last_trade_date != "" and current_date <= last_trade_date):
+                continue
+            
+            if (buy_dates.__contains__(util.get_date(data['Date'][i])) and\
+                buy_allowed):
+                trigger_price = buy_dates[util.get_date(data['Date'][i])]
+                if (i+3 >= len(data) or util.get_time(date[i+3]) > cut_off_time_to_start):
                     continue
-                target_price = prices[i] * (1 + target_pct / 100)
-                buy_time = date[i]
                 
-                # Ideally sell price should be opening price of the next candle.
-                pos_buy_price = prices[i]
-                num_units = math.floor((5 * initial_capital) / pos_buy_price)
-                message = "Buy trade initiated at: " + str(date[i]) + " Price: " + str(pos_buy_price)
-                super_trend_utils.print_debug_log(message, 0)
-                is_open_pos = 1
-                open_pos_type = "BUY"
-                status_list[i] = "BUY"
-                sl_price = st[i]
-            elif (super_trend_utils.can_sell(st[i-1], prices[i-1], st[i], prices[i],\
+                if (prices[i] >= trigger_price):
+                    if (low_prices[i+1] > low_prices[i] and\
+                        low_prices[i+2] > low_prices[i]):
+                        i += 3
+                        
+                        last_trade_ctr = i
+                        num_units = math.floor((5 * initial_capital) / open_prices[i])
+                        if (dynamic_sl):
+                            sl_pct_actual = buy_sl_pct * 5
+                            max_loss = initial_capital * sl_pct_actual / 100
+                            potential_loss_per_unit = open_prices[i] - low_prices[i-3]
+                            if (potential_loss_per_unit == 0):
+                                num_units_throttled = num_units
+                            else:
+                                num_units_throttled = math.floor(max_loss / potential_loss_per_unit)
+                                
+                            num_units = min(num_units, num_units_throttled)
+                        
+                        if (num_units <= 0):
+                            continue
+                        pos_buy_price = open_prices[i]
+                        buy_time = date[i]
+                        message = "Buy trade initiated at: " + str(date[i]) + " Price: " +\
+                            str(pos_buy_price)
+                        custom_strategy_util.print_debug_log(message, 0)
+                        is_open_pos = 1
+                        open_pos_type = "BUY"
+                        status_list[i] = "BUY"
+                        sl_price = low_prices[i-3]
+                        target_price = 2 * (open_prices[i] - sl_price) + open_prices[i]
+                        message = "Target: " + str(target_price) + " SL: " + str(sl_price)
+                        custom_strategy_util.print_debug_log(message, 0)
+                        num_buys += 1
+                        #last_trade_date = util.get_date(date[i])
+                        
+            elif (custom_strategy_util.can_sell(st[i-1], prices[i-1], st[i], prices[i],\
                                              ema[i]) and\
-                  super_trend_utils.get_signal_based_on_macd(macd, macd_signal,\
-                                                          longer_tf['Date'], date[i]) == "SELL"):
-                signal_list[i] = "SELL"
-                potential_sl =  st[i] - prices[i]
-                allowed_sl = prices[i] * sl_pct / 100
-                if (potential_sl > allowed_sl):
-                    message = "SL needed is not in the limits."
-                    super_trend_utils.print_debug_log(message, 0)
+                  custom_strategy_util.get_signal_based_on_macd(macd, macd_signal,\
+                                                          longer_tf['Date'], date[i]) == "SELL" and\
+                  sell_allowed):
+                if (i+1 >= len(data) or util.get_time(date[i+1]) > cut_off_time_to_start):
                     continue
-                target_price = prices[i] * (1 - target_pct / 100)
-                sell_time = date[i]
                 
-                # Ideally sell price should be opening price of the next candle.
-                pos_sell_price = prices[i]
+                i += 1
+                signal_list[i] = "SELL"
+                potential_sl =  st[i-1] - open_prices[i]
+                sell_time = date[i]
+                last_trade_ctr = i
+
+                pos_sell_price = open_prices[i]
                 num_units = math.floor((5 * initial_capital) / pos_sell_price)
+                if (dynamic_sl):
+                    sl_pct_actual = sell_sl_pct * 5
+                    max_loss = initial_capital * sl_pct_actual / 100
+                    if (potential_sl == 0):
+                        num_units_throttled = num_units
+                    else:
+                        num_units_throttled = math.floor(max_loss / potential_sl)
+                        
+                    num_units = min(num_units, num_units_throttled)
                 message = "Sell trade initiated at: " + str(date[i]) + " Price: " + str(pos_sell_price)
-                super_trend_utils.print_debug_log(message, 0)
+                custom_strategy_util.print_debug_log(message, 0)
                 is_open_pos = 1
                 open_pos_type = "SELL"
                 status_list[i] = "SELL"
-                sl_price = st[i]               
-        
-        print("[Initial Capital: 100000 -> Final capital: ", math.floor(initial_capital), "]")                
-        return total_pnl, initial_capital, status_list, signal_list, position_type_list, buy_time_list,\
+                sl_price = st[i-1]
+                target_price = open_prices[i] - 2 * (sl_price - open_prices[i])
+                num_sells += 1
+                #last_trade_date = util.get_date(date[i])
+                
+        print("[Initial Capital: 100000 -> Final capital: ", math.floor(initial_capital), "]")
+        return total_pnl, num_buys, num_buy_wins, num_sells, num_sell_wins, \
+            initial_capital, status_list, signal_list, position_type_list, buy_time_list,\
             buy_price_list, sell_time_list, sell_price_list, pnl_list, exit_method_list, num_units_list,\
             current_capital_list
-
-                
-    # Plot super trend signals. 
-    def plot_super_trend_band(data):
-        plt.plot(data['Close'], linewidth = 2, label = 'CLOSING PRICE')
-        plt.plot(data['st'], color = 'green', linewidth = 2,\
-             label = 'ST UPTREND 10,3')
-        plt.plot(data['st_dt'], color = 'r', linewidth = 2,\
-             label = 'ST DOWNTREND 10,3')
-        plt.legend(loc = 'upper left')
-        plt.show()

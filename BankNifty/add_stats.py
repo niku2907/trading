@@ -12,6 +12,7 @@ Created on Thu Jul 22 17:30:10 2021
 
 import pandas as pd
 import numpy as np
+import statsmodels.api as sm
 
 date = "Date"
 open_price = "Open"
@@ -76,6 +77,28 @@ class add_stats:
         df[col_name] = df[close_price].ewm(span = period, min_periods = period).mean()
         return DF.merge(df.loc[:, [date, col_name]], how = "outer", on = date)
     
+    def simple_ma(DF, period):
+        df = DF.copy()
+        col_name = 'SMA' + str(period)
+        df[col_name] = df[close_price].rolling(window = period).mean()
+        return DF.merge(df.loc[:, [date, col_name]], how = "outer", on = date)
+    
+    def slope(ser, period):
+        "function to calculate the slope of n consecutive points on a plot"
+        n = len(ser)
+        slopes = [0 for i in range(0, n)]
+        for i in range(period-1, n):
+            slopes[i] = 100 * (ser[i] - ser[i-period+1]) / ser[i-period+1]
+        # for i in range(period - 1, n - 1):
+        #     y = ser[i - period + 1: i]
+        #     y_scaled = (y - y[i - period + 1]) / y[i - period + 1]
+        #     print("Diff: ", y_scaled)
+        #     slopes.append(y_scaled / n)
+            
+        return np.array(slopes)
+        # slope_angle = (np.rad2deg(np.arctan(np.array(slopes))))
+        # return np.array(slope_angle)
+    
     def rsi(DF, n):
         df = DF.copy()
         df['delta'] = df[close_price] - df[close_price].shift(1)
@@ -127,6 +150,12 @@ class add_stats:
         #df['ATR'] = df['TR'].ewm(span=n,adjust=False,min_periods=n).mean()
         df2 = df.drop(['H-L','H-PC','L-PC'], axis=1)
         return df2
+    
+    def beyond_ATR(DF):
+        df = DF.copy()
+        df['CanBuy'] = df['High'] > (df['ATR'].shift(1) + df['Close'].shift(1))
+        df['CanSell'] = df['Low'] < (df['Close'].shift(1) - df['ATR'].shift(1))
+        return df
 
     def ADX(DF,n):
         "function to calculate ADX"

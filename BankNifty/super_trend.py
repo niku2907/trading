@@ -82,8 +82,10 @@ experiment_results_transactions = {}
 
 pick_daily_data = 0
 pick_hourly_data = 0
-pick_30_min_data = 1
+pick_30_min_data = 0
 test_dict = ({"2953217":"TCS"})
+test_dict2 = ({"119553":"HDFCLIFE"})
+test_dict3 = ({"779521":"SBIN"})
 
 for i in range(len(params)):
     stock_pnl = {}
@@ -96,7 +98,7 @@ for i in range(len(params)):
     ema_period = current_params.ema_period
     target_pct = current_params.target_pct
     sl_pct = current_params.sl_pct
-    for ticker_id, ticker_name in shortlisted_tickers_dict.items():
+    for ticker_id, ticker_name in name_zerodha_nse_id_dict.items():
         num_months = num_two_months * 2
         stock_file_name = "1_YEAR_TICKER_DATA/" + ticker_name + "_" + str(num_months) + "_MONTH_" +\
             num_minute_data + "_MINUTE_DATA.xlsx"
@@ -120,8 +122,6 @@ for i in range(len(params)):
         
         longer_tf_data = data_reader.read(longer_tf_file_name)
         longer_tf_data = add_stats.MACD(longer_tf_data, fast_ma_period, slow_ma_period, signal_period)
-        longer_tf_data = add_stats.ADX(longer_tf_data, 14)
-        longer_tf_data = add_stats.ema(longer_tf_data, 20)
         
         five_minute_data['st'], five_minute_data['st_upt'], five_minute_data['st_dt'] = \
             super_trend_utils.get_supertrend(five_minute_data['High'], five_minute_data['Low'],
@@ -140,10 +140,10 @@ for i in range(len(params)):
                                                     ema_period, target_pct, sl_pct, longer_tf_data)
         
         transactions.set_index("Position", inplace=True)
-        stock_pnl[stock_file_name] = total_pnl
-        stock_capital[stock_file_name] = capital
-        stock_metadata[stock_file_name] = five_minute_data
-        stock_transactions[stock_file_name] = transactions
+        stock_pnl[ticker_name] = total_pnl
+        stock_capital[ticker_name] = capital
+        stock_metadata[ticker_name] = five_minute_data
+        stock_transactions[ticker_name] = transactions
         
         #super_trend_utils.plot_super_trend_band(five_minute_data)
     

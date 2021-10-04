@@ -21,10 +21,11 @@ from zerodha_ticker_id import name_zerodha_nse_id_realty_dict
 from zerodha_ticker_id import name_zerodha_nse_id_it_dict
 from zerodha_ticker_id import name_zerodha_nse_id_fmcg_dict
 from zerodha_ticker_id import shortlisted_tickers_dict
+from zerodha_ticker_id import buy_stocks_dict
 
 headers = {'authority':'kite.zerodha.com',\
            'accept':'application/json, text/plain, */*',\
-           'authorization':'enctoken hghyC01gkqH7WkgbDZcpM0qqqeZSvjhO1xmnuVFtPO6sVA+HN6qjydYv2UcUTStXzyd3ekWgSuFMvPL8M0QQCZZXVi1X/ZFoMAP7JVoyoAeKuT2aIHaUYg=='}
+           'authorization':'enctoken gAN8bQJcaU6qgwdGhUe4c5QwVDVFiMi/z5tlf+DKGbHiPGGWOPisvujRbJ8aZf7vb6kkpec1t7KTl0kefIf+wgi6mzicV6CtDcmnDqzQ5/nmLD7PX9FRXw=='}
 
 def get_historical_data(ticker_id, ticker_name, num_two_months, num_minute_data):
     
@@ -92,13 +93,21 @@ def get_historical_daily_data(ticker_id, ticker_name, num_two_months):
 def generate_5_minute_data(num_two_months):
     for ticker_id, ticker_name in name_zerodha_nse_id_dict.items():
         get_historical_data(ticker_id, ticker_name, num_two_months, "5")
+        
+def generate_10_minute_data(num_two_months):
+    for ticker_id, ticker_name in name_zerodha_nse_id_dict.items():
+        get_historical_data(ticker_id, ticker_name, num_two_months, "10")
 
+def generate_15_minute_data(num_two_months):
+    for ticker_id, ticker_name in name_zerodha_nse_id_dict.items():
+        get_historical_data(ticker_id, ticker_name, num_two_months, "15")
+        
 def generate_daily_data(num_two_months):
-    for ticker_id, ticker_name in shortlisted_tickers_dict.items():
+    for ticker_id, ticker_name in buy_stocks_dict.items():
         get_historical_daily_data(ticker_id, ticker_name, num_two_months)
         
 def generate_hourly_data(num_two_months):
-    for ticker_id, ticker_name in shortlisted_tickers_dict.items():
+    for ticker_id, ticker_name in name_zerodha_nse_id_dict.items():
         get_historical_data(ticker_id, ticker_name, num_two_months, "60")
 
 def generate_half_hourly_data(num_two_months):
@@ -106,8 +115,9 @@ def generate_half_hourly_data(num_two_months):
         get_historical_data(ticker_id, ticker_name, num_two_months, "30")
 
 
-#generate_5_minute_data(6)
-#generate_daily_data(6)
+#generate_5_minute_data(18)
+#generate_10_minute_data(6)
+generate_daily_data(6)
 #generate_hourly_data(6)
-generate_half_hourly_data(6)
-# generate_15min_data(6)
+#generate_half_hourly_data(12)
+#generate_15_minute_data(6)

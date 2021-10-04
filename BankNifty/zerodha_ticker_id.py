@@ -112,7 +112,7 @@ name_zerodha_nse_id_dict = dict({"3861249":"ADANIPORT",\
                                  "2674433":"MCDOWELL",\
                                  "4843777":"VBL"})
     
-shortlisted_tickers_dict = ({    "81153":"BAJFINANCE",\
+shortlisted_tickers_dict = dict({"81153":"BAJFINANCE",\
                                  "4268801":"BAJAJFINSV",\
                                  "2714625":"BHARTI-AIRTEL",\
                                  "225537":"DRREDDY",\
@@ -135,3 +135,33 @@ shortlisted_tickers_dict = ({    "81153":"BAJFINANCE",\
                                  "3465729":"TECHM",\
                                  "4278529":"UBL",\
                                  "2952193":"ULTRACEM"})
+
+buy_stocks_dict = dict({"5215745":"COALINDIA",\
+                        "2889473":"UPL",\
+                        "81153":"BAJFINANCE",\
+                        "895745":"TATASTEEL",\
+                        "2714625":"BHARTI-AIRTEL",\
+                        "779521":"SBIN",\
+                        "4268801":"BAJAJFINSV",\
+                        "2955009":"COFORGE",\
+                        "177665":"CIPLA",\
+                        "340481":"HDFC",\
+                        "794369":"SHREECEM",\
+                        "3675137":"MINDTREE",\
+                        "1270529":"ICICI"})
+
+sell_stocks_dict = dict({"5215745":"COALINDIA",\
+                         "3699201":"IBREALEST",\
+                         "4843777":"VBL",\
+                         "884737":"TATAMOTORS",\
+                         "738561":"RELIANCE",\
+                         "179457":"HEMIPROP",\
+                         "3861249":"ADANIPORT",\
+                         "5197313":"PRESTIGE",\
+                         "415745":"IOC",\
+                         "2815745":"MARUTI",\
+                         "633601":"ONGC",\
+                         "2939649":"LT",\
+                         "424961":"ITC",\
+                         "857857":"SUNPHARMA",\
+                         "3887105":"BRIGADE"})
