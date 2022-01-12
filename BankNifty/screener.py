@@ -15,12 +15,12 @@ from util import util
 
 from zerodha_ticker_id import name_zerodha_nse_id_dict
 from zerodha_ticker_id import buy_stocks_dict
-
+from zerodha_ticker_id import buy_stocks_dict_low_capital
 num_two_months = 6
 atr_period = 60
 
 stock_buy_levels = {}
-for ticker_id, ticker_name in buy_stocks_dict.items():
+for ticker_id, ticker_name in buy_stocks_dict_low_capital.items():
         num_months = num_two_months * 2
         stock_file_name = "1_YEAR_TICKER_DATA/" + ticker_name + "_" + str(num_months) +\
             "_MONTH_DAILY_DATA.xlsx"
