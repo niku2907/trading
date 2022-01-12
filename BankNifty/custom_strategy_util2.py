@@ -1,6 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
+Created on Thu Oct 28 10:27:41 2021
+
+@author: nishant.gupta
+"""
+
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
 Created on Wed Sep 29 21:07:39 2021
 
 @author: nishant.gupta
@@ -126,7 +134,7 @@ class custom_strategy_util:
     @staticmethod
     def can_sell(prev_st, prev_price, current_st, current_price, ema):
         if (prev_st < prev_price and current_st > current_price):
-            return True
+            return current_price < ema
         
         return False
     
@@ -215,7 +223,7 @@ class custom_strategy_util:
         return num_buy_wins, num_sell_wins
             
     def implement_strategy(data, buy_sl_pct, buy_dates, ema_period, sell_sl_pct, longer_tf,\
-                           buy_allowed, sell_allowed, start_capital, cash_out_limit):
+                           buy_allowed, sell_allowed):
         prices = data['Close']
         date = data['Date']
         st = data['st']
@@ -226,8 +234,8 @@ class custom_strategy_util:
         macd = longer_tf['MACD']
         macd_signal = longer_tf['MACD_Signal']
         
-        cut_off_time_to_start = '14:25:00'
-        cut_off_time_to_close = '15:00:00'
+        cut_off_time_to_start = '14:30:00'
+        cut_off_time_to_close = '15:15:00'
         is_open_pos = 0
         open_pos_type = 'NA'
         buy_time = ""
@@ -254,7 +262,7 @@ class custom_strategy_util:
         status_list = ['NA' for i in range(len(data))]
         signal_list = ['NA' for i in range(len(data))]
         
-        initial_capital = start_capital
+        initial_capital = 10000
         num_units = 0
         last_trade_ctr = -1
         last_trade_date = ""
@@ -264,25 +272,11 @@ class custom_strategy_util:
         num_sell_wins = 0
         num_buys = 0
         num_buy_wins = 0
-        max_sl_pct = 3.2
-        reserves = 0
         
-        start_date = "2021-01-01"
-        #start_date = ""
-        end_date = "2021-12-31"
-        #end_date = ""
-        
-        max_trades_per_day = 2
-        num_trades_per_day_dict = {}
+        debug_date = ""
         for i in range(len(data)):
-            rr_ratio = 2
             if (initial_capital <= 0):
                 break
-            
-            if (initial_capital > cash_out_limit):
-                reserves += 0.2 * cash_out_limit
-                initial_capital -= 0.2 * cash_out_limit
-                #print("Cashing out: ", 0.2 * cash_out_limit, " on : ", util.get_date(date[i]))
             
             if (i <= last_trade_ctr or i <= 1):
                 continue
@@ -290,8 +284,7 @@ class custom_strategy_util:
             current_time = util.get_time(date[i])
             
                         
-            if ((start_date != "" and util.get_date(date[i]) < start_date) or\
-                (end_date != "" and util.get_date(date[i]) > end_date)):
+            if (debug_date != "" and util.get_date(date[i]) < debug_date):
                 continue
             
             # Check if autosqaure off needed.
@@ -403,7 +396,6 @@ class custom_strategy_util:
                         can_close_pos = 1
                         status_list[i] = "[Target] BUY"
                         exit_method = "Target BUY"
-                        #print("Target achieved !!: ", message)
                         
                     if (can_close_pos == 1):
                         buy_time = date[i]
@@ -435,9 +427,7 @@ class custom_strategy_util:
                 continue
             
             current_date = util.get_date(date[i])
-            if ((last_trade_date != "" and current_date <= last_trade_date) or\
-                (num_trades_per_day_dict.__contains__(current_date) and\
-                 num_trades_per_day_dict[current_date] >= max_trades_per_day)):
+            if (last_trade_date != "" and current_date <= last_trade_date):
                 continue
             
             if (buy_dates.__contains__(util.get_date(data['Date'][i])) and\
@@ -492,14 +482,8 @@ class custom_strategy_util:
                     continue
                 
                 i += 1
-                
-                potential_sl =  st[i-1] - open_prices[i]
-                potential_sl_pct = (potential_sl / open_prices[i]) * 100
-                # if (potential_sl_pct * rr_ratio < 1):
-                #     rr_ratio = 3
-                if (potential_sl_pct > max_sl_pct):
-                    continue
                 signal_list[i] = "SELL"
+                potential_sl =  st[i-1] - open_prices[i]
                 sell_time = date[i]
                 last_trade_ctr = i
 
@@ -520,15 +504,12 @@ class custom_strategy_util:
                 open_pos_type = "SELL"
                 status_list[i] = "SELL"
                 sl_price = st[i-1]
-                target_price = open_prices[i] - rr_ratio * (sl_price - open_prices[i])
+                target_price = open_prices[i] - 2 * (sl_price - open_prices[i])
                 num_sells += 1
-                util.add_or_update_val_to_key(num_trades_per_day_dict, util.get_date(date[i]), 1)
                 #last_trade_date = util.get_date(date[i])
-        
-        #reserves += initial_capital
+                
         print("[Initial Capital: 10000 -> Final capital: ", math.floor(initial_capital), "]")
-        print("Wealth: ", reserves)
         return total_pnl, num_buys, num_buy_wins, num_sells, num_sell_wins, \
-            initial_capital, reserves, status_list, signal_list, position_type_list, buy_time_list,\
+            initial_capital, status_list, signal_list, position_type_list, buy_time_list,\
             buy_price_list, sell_time_list, sell_price_list, pnl_list, exit_method_list, num_units_list,\
             current_capital_list, pct_pnl_list, total_pct_pnl_list, target_price_list
