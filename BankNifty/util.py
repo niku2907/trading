@@ -12,6 +12,9 @@ class util:
         # date = '2020-07-28T15:25:00+0530'
         return data.split('T')[0]
     
+    def get_day_of_month(data):
+        return data.split('-')[2]
+    
     def get_time(data):
         # data = '2020-07-28T15:25:00+0530'
         return data.split('T')[1].split('+')[0]

@@ -16,7 +16,7 @@ class data_reader:
     def read(file_name):
         return pd.read_excel(file_name)
     
-exp1 = data_reader.read("NIFTYBANK_SIXTEEN_YEAR_DATA.xlsx")
+#exp1 = data_reader.read("NIFTYBANK_SIXTEEN_YEAR_DATA.xlsx")
 
 #exp1.set_index('Date', inplace=True)
 #exp2 = data_reader.read("Historical_data.xlsx", "July21")

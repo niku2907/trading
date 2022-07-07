@@ -31,8 +31,13 @@ from zerodha_ticker_id import fno_shortlists_dict
 
 all_stocks_dict = {**name_zerodha_nse_id_dict, **mid_cap_stocks_dict, **next_fifty_stocks_dict}
 
-num_two_months = 24
 num_minute_data = "5"
+
+# Change this expand/shorten the time window under consideration
+prev_num_years = 4
+
+file_prefix = str(int(prev_num_years)) + "_YEAR_TICKER_DATA/"
+num_two_months = prev_num_years * 6
 
 stock_metadata = {}
 stock_buy_days = {}
@@ -58,21 +63,21 @@ buy_sl_pct = 1.0
 fast_ma_period = 12
 slow_ma_period = 26
 signal_period = 9
-st_lookback_period = 20
-st_multiplier = 1.8
+st_lookback_period = 21
+st_multiplier = 1.45
 ema_period = 100
-sell_sl_pct = 1
+sell_sl_pct = 1.0
 
 buy_allowed = 0
 sell_allowed = 1
 
-start_capital = 10000
-cash_out_limit = 10000000 * 10000000
+start_capital = 100000
+cash_out_limit = 1000000
 for ticker_id, ticker_name in test_dict3.items():
         num_months = num_two_months * 2
         buy_days = {}
         
-        stock_file_name = "4_YEAR_TICKER_DATA/" + ticker_name + "_" + str(num_months) +\
+        stock_file_name = file_prefix + ticker_name + "_" + str(num_months) +\
             "_MONTH_DAILY_DATA.xlsx"
 
         print("********************************************************************")
@@ -87,12 +92,12 @@ for ticker_id, ticker_name in test_dict3.items():
                 buy_days[util.get_date(daily_data['Date'][i])] =\
                     daily_data['Close'][i-1] + daily_data['ATR'][i]
         
-        stock_file_name = "4_YEAR_TICKER_DATA/" + ticker_name + "_" + str(num_months) + "_MONTH_" +\
+        stock_file_name = file_prefix + ticker_name + "_" + str(num_months) + "_MONTH_" +\
             num_minute_data + "_MINUTE_DATA.xlsx"
         five_minute_data = data_reader.read(stock_file_name)
         five_minute_data = add_stats.ema(five_minute_data, ema_period)
         
-        longer_tf_file_name = "4_YEAR_TICKER_DATA/" + ticker_name + "_" +\
+        longer_tf_file_name = file_prefix + ticker_name + "_" +\
             str(num_months) + "_MONTH_60_MINUTE_DATA.xlsx"
         longer_tf_data = data_reader.read(longer_tf_file_name)
         longer_tf_data = add_stats.MACD(longer_tf_data, fast_ma_period, slow_ma_period, signal_period)
@@ -113,10 +118,11 @@ for ticker_id, ticker_name in test_dict3.items():
             five_minute_data['Status'], five_minute_data['Signal'],\
             transactions['Position'],\
             transactions['Buy Time'], transactions['Buy Price'], transactions['Sell Time'],\
-                transactions['Sell Price'], transactions['Pnl'], transactions['Exit Method'],\
-                    transactions['Num Units'], transactions['Current Capital(k)'], \
-                    transactions['Pnl %'], transactions['Total Pnl%'], transactions['Target Price'] = \
-            custom_strategy_util.implement_strategy(five_minute_data, buy_sl_pct, buy_days,\
+            transactions['Sell Price'], transactions['Pnl'], transactions['Exit Method'],\
+            transactions['Num Units'], transactions['Current Capital(k)'], \
+            transactions['Pnl %'], transactions['Total Pnl%'], transactions['Target Price'],\
+            pnl_per_day_of_month_dict = \
+                custom_strategy_util.implement_strategy(five_minute_data, buy_sl_pct, buy_days,\
                                                        ema_period, sell_sl_pct, longer_tf_data,\
                                                        buy_allowed, sell_allowed, start_capital,\
                                                        cash_out_limit)
@@ -173,14 +179,39 @@ for ticker_name, value in stock_transactions.items():
     for i in range(len(value['Buy Time'])):
         month_year = util.get_month_year(value['Buy Time'][i])
         if (monthly_wins_dict[ticker_name].__contains__(month_year) == 0):
-            monthly_wins_dict[ticker_name][month_year] = [0, 0, 0]
+            monthly_wins_dict[ticker_name][month_year] = [0, 0, 0, value['Current Capital(k)'][i]]
         
         if (value['Pnl'][i] > 0):
             monthly_wins_dict[ticker_name][month_year][0] += 1
         else:
             monthly_wins_dict[ticker_name][month_year][1] += 1
             
-        monthly_wins_dict[ticker_name][month_year][2] += value['Pnl'][i]
+        monthly_wins_dict[ticker_name][month_year][2] += value['Pnl'][i]/1000
+
+month_list = []
+start_capital_list = []
+end_capital_list = []
+wins_pct_list = []
+roi_list = []
+for ticker_name, value in monthly_wins_dict.items():
+    for month_year, stat in value.items():
+        month_list.append(month_year)
+        current_start_capital = stat[3] * 1000
+        current_end_capital = current_start_capital + stat[2]
+        current_roi = 100 * (stat[2] / current_start_capital)
+        start_capital_list.append(current_start_capital / 1000)
+        end_capital_list.append(current_end_capital / 1000)
+        roi_list.append(current_roi)
+        wins_pct_list.append(100 * stat[0]/(stat[0] + stat[1]))
+        
+monthly_stats = pd.DataFrame(columns = ['Month', 'Start Capital', 'End Capital', 'Wins(%)', 'ROI'])
+monthly_stats['Month'] = month_list
+monthly_stats['Start Capital'] = start_capital_list
+monthly_stats['End Capital'] = end_capital_list
+monthly_stats['Wins(%)'] = wins_pct_list
+monthly_stats['ROI'] = roi_list
+
+
         
 
         
