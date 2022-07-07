@@ -114,17 +114,9 @@ class custom_strategy_util:
         
         return st, upt, dt
     
-    # Get BUY signal
-    @staticmethod
-    def can_buy(prev_st, prev_price, current_st, current_price, ema):
-        if (prev_st > prev_price and current_st < current_price):
-            return current_price > ema
-        
-        return False
-    
     # Get SELL signal
     @staticmethod
-    def can_sell(prev_st, prev_price, current_st, current_price, ema):
+    def can_sell(prev_st, prev_price, current_st, current_price):
         if (prev_st < prev_price and current_st > current_price):
             return True
         
@@ -183,26 +175,6 @@ class custom_strategy_util:
     @staticmethod
     def get_signal_based_on_macd(macd_list, macd_signal_list, date_list, current_date):
         return "SELL"
-        for i in range(len(macd_list)):
-            test_date = util.get_date_time(date_list[i])
-            current_date = util.get_date_time(current_date)
-            if (test_date <= current_date):
-                continue
-            
-            if (i == 0):
-                continue
-            look_back = 2
-            if (util.get_date_time(date_list[i-1]) == util.get_date_time(current_date) or\
-                i-look_back < 0):
-                look_back = 1
-            
-            message = "Using MACD of Date: " + str(date_list[i-look_back])
-            custom_strategy_util.print_debug_log(message, 0)
-            if (macd_list[i-look_back] > macd_signal_list[i-look_back]):
-                return "BUY"
-            else:
-                return "SELL"
-        return "NA"
     
     @staticmethod
     def update_wins_data(pos_type, pnl, num_buy_wins, num_sell_wins):
@@ -226,7 +198,12 @@ class custom_strategy_util:
         macd = longer_tf['MACD']
         macd_signal = longer_tf['MACD_Signal']
         
-        cut_off_time_to_start = '14:25:00'
+        start_time = '09:15:00'
+        
+        # Open price of the cutoff time.
+        cut_off_time_to_start = '13:00:00'
+        
+        # Close price of the cutoff time.
         cut_off_time_to_close = '15:00:00'
         is_open_pos = 0
         open_pos_type = 'NA'
@@ -237,6 +214,7 @@ class custom_strategy_util:
         total_pnl = 0
         sl_price = 0
         target_price = 0
+        decrease_sl_trigger_price = 0
 
         buy_time_list = []
         sell_time_list = []
@@ -267,13 +245,18 @@ class custom_strategy_util:
         max_sl_pct = 3.2
         reserves = 0
         
-        start_date = "2021-01-01"
-        #start_date = ""
-        end_date = "2021-12-31"
-        #end_date = ""
+        #start_date = "2022-07-01"
+        start_date = ""
+        #end_date = "2022-06-30"
+        end_date = ""
         
         max_trades_per_day = 2
         num_trades_per_day_dict = {}
+        pnl_per_day_dict = {}
+        pnl_per_day_of_month_dict = {}
+        num_target_buy_per_month = {}
+        
+        buffer = 0
         for i in range(len(data)):
             rr_ratio = 2
             if (initial_capital <= 0):
@@ -295,12 +278,12 @@ class custom_strategy_util:
                 continue
             
             # Check if autosqaure off needed.
-            if (current_time >= cut_off_time_to_close):
+            if (current_time > cut_off_time_to_close):
                 if (is_open_pos == 1):
                     pos_type = "BUY"
                     exit_method = "Cutoff BUY"
                     if (open_pos_type == "BUY"):
-                        pos_sell_price = prices[i]
+                        pos_sell_price = open_prices[i]
                         message = "Autosquare off initiated. Sell price: " + str(pos_sell_price)
                         custom_strategy_util.print_debug_log(message, 0)
                         open_pos_type = ""
@@ -310,7 +293,7 @@ class custom_strategy_util:
                         exit_method = "Cutoff SELL"
                         
                     else:
-                        pos_buy_price = prices[i]
+                        pos_buy_price = open_prices[i]
                         message = "Autosquare off initiated. Buy price: " + str(pos_buy_price)
                         custom_strategy_util.print_debug_log(message, 0)
                         open_pos_type = ""
@@ -335,54 +318,24 @@ class custom_strategy_util:
                                         initial_capital/1000, current_capital_list, pct_pnl_list,\
                                         total_pct_pnl_list,\
                                         target_price, target_price_list)
+                    ctr = 1
+                    if (current_pnl < 0):
+                        ctr = -1
+                    day = util.get_day_of_month(util.get_date(sell_time))
+                    if (pnl_per_day_of_month_dict.__contains__(day) == False):
+                        pnl_per_day_of_month_dict[day] = [0, 0, 0, 0]
+                    
+                    pnl_per_day_of_month_dict[day][0] += ctr
+                    if (ctr > 0):
+                        pnl_per_day_of_month_dict[day][1] += ctr
+                    else:
+                        pnl_per_day_of_month_dict[day][2] += ctr
+                    
+                    pnl_per_day_of_month_dict[day][3] += current_pnl
                 continue
             
             if (is_open_pos == 1):
-                if (open_pos_type == "BUY"):
-                    can_close_pos = 0
-                    exit_method = ""
-                    # Check if SL hit.
-                    if (low_prices[i] <= sl_price):
-                        pos_sell_price = sl_price
-                        message = "[SL] Closing position. Time: " + str(date[i]) + " Buy Price: " +\
-                            str(pos_buy_price) + " Sell Price: " + str(pos_sell_price)
-                        custom_strategy_util.print_debug_log(message, 0)
-                        can_close_pos = 1
-                        status_list[i] = "[SL] SELL"
-                        exit_method = "SL SELL"
-                        
-                    # Check if target achieved.
-                    elif (high_prices[i] >= target_price):
-                        pos_sell_price = target_price
-                        message = "[Target] Closing position. Time: " + str(date[i]) + " Buy Price: " +\
-                            str(pos_buy_price) + " Sell Price: " + str(pos_sell_price)
-                        custom_strategy_util.print_debug_log(message, 0)
-                        can_close_pos = 1
-                        status_list[i] = "[Target] SELL"
-                        exit_method = "Target SELL"
-
-                    if (can_close_pos == 1):
-                        sell_time = date[i]
-                        is_open_pos = 0
-                        open_pos_type = "NA"
-                        current_pnl = custom_strategy_util.get_pnl(pos_buy_price,\
-                                                               pos_sell_price, num_units)
-                        num_buy_wins, num_sell_wins = custom_strategy_util.update_wins_data("BUY",\
-                                                                                        current_pnl,\
-                                                                                        num_buy_wins,\
-                                                                                        num_sell_wins)
-                        total_pnl += current_pnl
-                        initial_capital += current_pnl
-                        custom_strategy_util.update_transaction_record(pos_buy_price, buy_time,\
-                                            pos_sell_price, sell_time,\
-                                            buy_price_list, buy_time_list,\
-                                            sell_price_list, sell_time_list,\
-                                            "BUY", position_type_list, current_pnl, pnl_list,\
-                                            exit_method, exit_method_list, num_units, num_units_list,\
-                                            initial_capital /1000, current_capital_list, pct_pnl_list,\
-                                            total_pct_pnl_list,\
-                                            target_price, target_price_list)
-                elif (open_pos_type == "SELL"):
+                if (1):
                     can_close_pos = 0
                     exit_method = ""
                     
@@ -403,8 +356,18 @@ class custom_strategy_util:
                         can_close_pos = 1
                         status_list[i] = "[Target] BUY"
                         exit_method = "Target BUY"
-                        #print("Target achieved !!: ", message)
+                        month_year = util.get_month_year(sell_time)
                         
+                        if (num_target_buy_per_month.__contains__(month_year) == False):
+                            num_target_buy_per_month[month_year] = 0
+                        
+                        num_target_buy_per_month[month_year] += 1
+                            
+                        #print("Target achieved !!: ", message)
+                    elif (low_prices[i] <= decrease_sl_trigger_price and 0):
+                        # Decresing SL to the cost price does not give any better results and hence disabling
+                        # this feature.
+                        sl_price = pos_sell_price
                     if (can_close_pos == 1):
                         buy_time = date[i]
                         is_open_pos = 0
@@ -426,11 +389,33 @@ class custom_strategy_util:
                                             initial_capital/1000, current_capital_list, pct_pnl_list,\
                                             total_pct_pnl_list,\
                                             target_price, target_price_list)
+                        util.add_or_update_val_to_key(pnl_per_day_dict, util.get_date(date[i]),\
+                                                      current_pnl)
+                        ctr = 1
+                        if (current_pnl < 0):
+                            ctr = -1
+                        day = util.get_day_of_month(util.get_date(sell_time))
+                        if (pnl_per_day_of_month_dict.__contains__(day) == False):
+                            pnl_per_day_of_month_dict[day] = [0, 0, 0, 0]
+                        
+                        pnl_per_day_of_month_dict[day][0] += ctr
+                        if (ctr > 0):
+                            pnl_per_day_of_month_dict[day][1] += ctr
+                        else:
+                            pnl_per_day_of_month_dict[day][2] += ctr
+                        
+                        pnl_per_day_of_month_dict[day][3] += current_pnl
+                        
                 continue
             
             # Check if we can open a new position.                                     
             if (current_time > cut_off_time_to_start):
                 message = "Not trying to initate a new trade after cutoff time."
+                custom_strategy_util.print_debug_log(message, -1)
+                continue
+            
+            if (current_time < start_time):
+                message = "Not trying to initate a new trade before start time."
                 custom_strategy_util.print_debug_log(message, -1)
                 continue
             
@@ -440,69 +425,52 @@ class custom_strategy_util:
                  num_trades_per_day_dict[current_date] >= max_trades_per_day)):
                 continue
             
-            if (buy_dates.__contains__(util.get_date(data['Date'][i])) and\
-                buy_allowed):
-                trigger_price = buy_dates[util.get_date(data['Date'][i])]
-                if (i+3 >= len(data) or util.get_time(date[i+3]) > cut_off_time_to_start):
+            if (custom_strategy_util.can_sell(st[i-1], prices[i-1], st[i], prices[i]) and\
+                  sell_allowed):
+                
+                if (util.get_day_of_month(util.get_date(date[i+1])) > "31"):
+                    #print("Date: ", date[i+1])
                     continue
                 
-                if (prices[i] >= trigger_price):
-                    if (low_prices[i+1] > low_prices[i] and\
-                        low_prices[i+2] > low_prices[i] and\
-                        prices[i+1] >= trigger_price and\
-                        prices[i+2] >= trigger_price):
-                        i += 3
+                if (util.get_time(date[i+1]) == "09:20:00" and 1):
+                    # If diffference in opening price and the closing price of the last candle is > 1.5%
+                    # skip the trade (only for gap down scenario). This is valid for all the cases and not
+                    # just for the 9:20am candle.
+                    prev_price = prices[i-1]
+                    current_price = open_prices[i]
+                    is_gap_down = False
+                    if (current_price < prev_price):
+                        is_gap_down = True
                         
-                        last_trade_ctr = i
-                        num_units = math.floor((5 * initial_capital) / open_prices[i])
-                        if (dynamic_sl):
-                            sl_pct_actual = buy_sl_pct * 5
-                            max_loss = initial_capital * sl_pct_actual / 100
-                            potential_loss_per_unit = open_prices[i] - low_prices[i-3]
-                            if (potential_loss_per_unit == 0):
-                                num_units_throttled = num_units
-                            else:
-                                num_units_throttled = math.floor(max_loss / potential_loss_per_unit)
-                                
-                            num_units = min(num_units, num_units_throttled)
-                        
-                        if (num_units <= 0):
+                    if (is_gap_down == True):
+                        diff_pct = ((prev_price - current_price) / prev_price) * 100
+                        if (diff_pct > 1):
+                            #print("Date: " + str(date[i+1]))
                             continue
-                        pos_buy_price = open_prices[i]
-                        buy_time = date[i]
-                        message = "Buy trade initiated at: " + str(date[i]) + " Price: " +\
-                            str(pos_buy_price)
-                        custom_strategy_util.print_debug_log(message, 0)
-                        is_open_pos = 1
-                        open_pos_type = "BUY"
-                        status_list[i] = "BUY"
-                        sl_price = low_prices[i-3]
-                        target_price = 2 * (open_prices[i] - sl_price) + open_prices[i]
-                        message = "Target: " + str(target_price) + " SL: " + str(sl_price)
-                        custom_strategy_util.print_debug_log(message, 0)
-                        num_buys += 1
-                        #last_trade_date = util.get_date(date[i])
-                        
-            elif (custom_strategy_util.can_sell(st[i-1], prices[i-1], st[i], prices[i],\
-                                             ema[i]) and\
-                  custom_strategy_util.get_signal_based_on_macd(macd, macd_signal,\
-                                                          longer_tf['Date'], date[i]) == "SELL" and\
-                  sell_allowed):
                 if (i+1 >= len(data) or util.get_time(date[i+1]) > cut_off_time_to_start):
+                    continue
+                
+                if (pnl_per_day_dict.__contains__(current_date) and pnl_per_day_dict[current_date] > 0 and 0):
+                    #print("Skipping the 2nd trade.")
                     continue
                 
                 i += 1
                 
-                potential_sl =  st[i-1] - open_prices[i]
+                potential_sl =  ((math.ceil(st[i-1] * 10)) / 10) - open_prices[i]
+                #potential_sl = st[i-1] - open_prices[i]
                 potential_sl_pct = (potential_sl / open_prices[i]) * 100
                 # if (potential_sl_pct * rr_ratio < 1):
                 #     rr_ratio = 3
                 if (potential_sl_pct > max_sl_pct):
                     continue
-                signal_list[i] = "SELL"
-                sell_time = date[i]
-                last_trade_ctr = i
-
+                
+                month_year = util.get_month_year(date[i])
+                
+                if (num_target_buy_per_month.__contains__(month_year) and\
+                    num_target_buy_per_month[month_year] > 200):
+                    # Don't num target buy for the month 
+                    continue
+                
                 pos_sell_price = open_prices[i]
                 num_units = math.floor((5 * initial_capital) / pos_sell_price)
                 if (dynamic_sl):
@@ -512,23 +480,32 @@ class custom_strategy_util:
                         num_units_throttled = num_units
                     else:
                         num_units_throttled = math.floor(max_loss / potential_sl)
-                        
+                    
                     num_units = min(num_units, num_units_throttled)
+                    
+                signal_list[i] = "SELL"
+                sell_time = date[i]
+                last_trade_ctr = i
+
+
                 message = "Sell trade initiated at: " + str(date[i]) + " Price: " + str(pos_sell_price)
                 custom_strategy_util.print_debug_log(message, 0)
                 is_open_pos = 1
                 open_pos_type = "SELL"
                 status_list[i] = "SELL"
-                sl_price = st[i-1]
-                target_price = open_prices[i] - rr_ratio * (sl_price - open_prices[i])
+                sl_price = (math.ceil(st[i-1] * 10)) / 10
+                #sl_price = st[i-1]
+                target_price = (math.ceil(10 * (open_prices[i] - rr_ratio * potential_sl)) / 10)
+                decrease_sl_trigger_price = open_prices[i] - 1 * (sl_price - open_prices[i])
                 num_sells += 1
                 util.add_or_update_val_to_key(num_trades_per_day_dict, util.get_date(date[i]), 1)
                 #last_trade_date = util.get_date(date[i])
         
         #reserves += initial_capital
-        print("[Initial Capital: 10000 -> Final capital: ", math.floor(initial_capital), "]")
+        print("[Initial Capital: 100000 -> Final capital: ", math.floor(initial_capital), "]")
         print("Wealth: ", reserves)
         return total_pnl, num_buys, num_buy_wins, num_sells, num_sell_wins, \
             initial_capital, reserves, status_list, signal_list, position_type_list, buy_time_list,\
             buy_price_list, sell_time_list, sell_price_list, pnl_list, exit_method_list, num_units_list,\
-            current_capital_list, pct_pnl_list, total_pct_pnl_list, target_price_list
+            current_capital_list, pct_pnl_list, total_pct_pnl_list, target_price_list,\
+            pnl_per_day_of_month_dict

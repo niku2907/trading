@@ -325,7 +325,9 @@ sell_stocks_dict_low_capital_new = dict({
                                      "633601":"ONGC",\
                                      "579329":"BANDHANBANK"
                                      })
-    
+
+current_stocks_dict = dict({"3699201":"IBREALEST"})
+
 name_zerodha_nse_fno_dict = dict({
                                     "4267265":"BAJAJ-AUTO",\
                                     "81153":"BAJFINANCE",\
