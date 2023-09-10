@@ -29,12 +29,28 @@ from zerodha_ticker_id import sell_stocks_dict_low_capital_new
 from zerodha_ticker_id import name_zerodha_nse_fno_dict
 from zerodha_ticker_id import fno_shortlists_dict
 from zerodha_ticker_id import current_stocks_dict
+from zerodha_ticker_id import name_zerodha_nse_id_realty_dict
+from zerodha_ticker_id import name_zerodha_nse_id_it_dict
+from zerodha_ticker_id import name_zerodha_nse_id_fmcg_dict
+from zerodha_ticker_id import screener_stocks_dict
+from zerodha_ticker_id import rsi_screener_tickers
 
-all_stocks_dict = {**name_zerodha_nse_id_dict, **mid_cap_stocks_dict, **next_fifty_stocks_dict}
+all_stocks_dict = {**name_zerodha_nse_id_dict, **mid_cap_stocks_dict,\
+                   **next_fifty_stocks_dict, **name_zerodha_nse_fno_dict,\
+                   **fno_shortlists_dict, **current_stocks_dict,\
+                   **name_zerodha_nse_id_realty_dict,\
+                   **name_zerodha_nse_id_it_dict, **name_zerodha_nse_id_fmcg_dict,\
+                   **screener_stocks_dict}
+
+test_dict3 = rsi_screener_tickers
+
+#test_dict3 = fno_shortlists_dict
+
+#test_dict3 = ({"3699201":"IBREALEST"})
 
 headers = {'authority':'kite.zerodha.com',\
            'accept':'application/json, text/plain, */*',\
-           'authorization':'enctoken 3bIXBTeHv1hYogAUPAwVXzZfi8N2F/QFj5bRzDX1Ocg85pBHUboTmp7WBC1bSHIBViYaPG2at0eqglnO3crte5sLICOiK9BwLbAIxbix9SBXSYhubdHZPQ=='}
+           'authorization':'enctoken GiwpGlEcP5+lVmYEkMWdCi7PhSUIrhEW+lMoJwgkDnZgi8vpI00D2Ecst3GnhLRIz5YszlIixh5luDPBA7F95TG1ALKgymLaqu+Xr+KseKVcku0Mgo4h5A=='}
 
 def get_file_name(ticker_name, num_two_months, num_minute_data):
     prev_num_years = (num_two_months * 2) / 12
@@ -56,7 +72,12 @@ def get_historical_data(ticker_id, ticker_name, num_two_months, num_minute_data)
         
         end_date = start_date + datetime.timedelta(60)
         print("Start: ", start_date, " End: ", end_date)
-        url = 'https://kite.zerodha.com/oms/instruments/historical/' + ticker_id + '/' + num_minute_data
+        url = ""
+        if (num_minute_data == "1"):
+            url = 'https://kite.zerodha.com/oms/instruments/historical/' + ticker_id + '/'
+        else:
+            url = 'https://kite.zerodha.com/oms/instruments/historical/' + ticker_id + '/' + num_minute_data
+
         url += 'minute?user_id=JB7207&oi=1&from=' +\
             str(start_date) + '&to=' + str(end_date)
         res = requests.get(url, headers = headers)
@@ -109,7 +130,7 @@ def get_historical_daily_data(ticker_id, ticker_name, num_two_months):
     df.to_excel(file_name)
     
 def generate_5_minute_data(num_two_months):
-    for ticker_id, ticker_name in current_stocks_dict.items():
+    for ticker_id, ticker_name in test_dict3.items():
         get_historical_data(ticker_id, ticker_name, num_two_months, "5")
         
 # def generate_10_minute_data(num_two_months):
@@ -117,23 +138,35 @@ def generate_5_minute_data(num_two_months):
 #         get_historical_data(ticker_id, ticker_name, num_two_months, "10")
 
 def generate_15_minute_data(num_two_months):
-    for ticker_id, ticker_name in current_stocks_dict.items():
+    for ticker_id, ticker_name in test_dict3.items():
         get_historical_data(ticker_id, ticker_name, num_two_months, "15")
         
+def generate_30_minute_data(num_two_months):
+    for ticker_id, ticker_name in test_dict3.items():
+        get_historical_data(ticker_id, ticker_name, num_two_months, "30")
+        
 def generate_daily_data(num_two_months):
-    for ticker_id, ticker_name in current_stocks_dict.items():
+    for ticker_id, ticker_name in test_dict3.items():
         get_historical_daily_data(ticker_id, ticker_name, num_two_months)
         
 def generate_hourly_data(num_two_months):
-    for ticker_id, ticker_name in current_stocks_dict.items():
+    for ticker_id, ticker_name in test_dict3.items():
         get_historical_data(ticker_id, ticker_name, num_two_months, "60")
 
 # def generate_half_hourly_data(num_two_months):
 #     for ticker_id, ticker_name in buy_stocks_dict_low_capital.items():
 #         get_historical_data(ticker_id, ticker_name, num_two_months, "30")
 
+def generate_1_minute_data(num_two_months):
+    for ticker_id, ticker_name in test_dict3.items():
+        get_historical_data(ticker_id, ticker_name, num_two_months, "1")
 
-generate_5_minute_data(24)
-generate_daily_data(24)
-generate_hourly_data(24)
+num_two_months = 12
+# generate_1_minute_data(num_two_months)
+generate_5_minute_data(num_two_months)
+# generate_15_minute_data(num_two_months)
+# generate_30_minute_data(num_two_months)
+# generate_hourly_data(num_two_months)
+generate_daily_data(num_two_months)
+#generate_hourly_data(1)
 #generate_15_minute_data(6)
