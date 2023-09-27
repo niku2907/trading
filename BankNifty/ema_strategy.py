@@ -1,20 +1,18 @@
-#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Wed Sep 29 21:23:38 2021
+Created on Sat Apr 29 13:31:18 2023
 
-@author: nishant.gupta
+@author: NishantGupta
 """
 
 import pandas as pd
+import talib
 
 from add_stats import add_stats
 from data_reader import data_reader 
 
 from util import util
-
-from custom_strategy_util import custom_strategy_util
-#from custom_strategy_utils_new import custom_strategy_util
+from ema_strategy_utils import ema_strategy_util
 
 from zerodha_ticker_id import name_zerodha_nse_id_dict
 from zerodha_ticker_id import shortlisted_tickers_dict
@@ -29,15 +27,48 @@ from zerodha_ticker_id import sell_stocks_dict_low_capital_new
 from zerodha_ticker_id import name_zerodha_nse_fno_dict
 from zerodha_ticker_id import fno_shortlists_dict
 
-all_stocks_dict = {**name_zerodha_nse_id_dict, **mid_cap_stocks_dict, **next_fifty_stocks_dict}
+test_dict3 = ({})
 
 num_minute_data = "5"
 
 # Change this expand/shorten the time window under consideration
-prev_num_years = 10
+prev_num_years = 1
+num_two_months = prev_num_years * 6
 
 file_prefix = str(int(prev_num_years)) + "_YEAR_TICKER_DATA/"
-num_two_months = prev_num_years * 6
+
+#num_two_months = 6
+bank_nifty_simulation = 1
+nifty_simulation = 0
+
+sell_sl_pct = 5
+if bank_nifty_simulation == 1:
+    test_dict3 = ({"260105":"BANKNIFTY"})
+    price_per_lot = 150000
+    lot_size = 25
+elif nifty_simulation == 1:
+    test_dict3 = ({"256265":"NIFTY"})
+    price_per_lot = 110000
+    lot_size = 50
+else:
+    test_dict3 = {**name_zerodha_nse_id_dict, **mid_cap_stocks_dict, **next_fifty_stocks_dict}
+    test_dict3 = ({"341249":"HDFCBANK"})
+    price_per_lot = -1
+    lot_size = -1
+    
+
+start_execution_error_pct = 0.001
+sl_buffer_pct = 0.001
+
+ema_period = 8
+
+buy_sl_pct = 5
+buy_ema_period = 15
+
+buy_allowed = 0
+sell_allowed = 1
+start_capital = 2000000
+cash_out_limit = 300000000000
 
 stock_metadata = {}
 stock_buy_days = {}
@@ -53,73 +84,50 @@ stock_metadata = {}
 stock_transactions = {}
 stock_monthly_cash_out_stats = {}
 
-test_dict = ({"5215745":"COALINDIA"})
-test_dict2 = ({"884737":"TATAMOTORS"})
-test_dict3 = ({"3699201":"IBREALEST"})
+if buy_allowed:
+    num_minute_data = "15"
 
-#test_dict3 = ({"884737":"TATAMOTORS"})
-
-# Buy params
-atr_period = 60
-buy_sl_pct = 1.2
-
-# Sell params
-fast_ma_period = 12
-slow_ma_period = 26
-signal_period = 9
-st_lookback_period = 23
-st_multiplier = 1.3
-ema_period = 100
-sell_sl_pct = 1
-
-buy_allowed = 0
-sell_allowed = 1
-
-start_capital = 337000
-cash_out_limit = 1000000
 for ticker_id, ticker_name in test_dict3.items():
         num_months = num_two_months * 2
         buy_days = {}
         
-        stock_file_name = file_prefix + ticker_name + "_" + str(num_months) +\
-            "_MONTH_DAILY_DATA.xlsx"
+        stock_file_name = file_prefix + ticker_name + "_" + str(num_months) + "_MONTH_" +\
+            num_minute_data + "_MINUTE_DATA.xlsx"
+        five_or_fifteen_minute_data = data_reader.read(stock_file_name)
+        five_or_fifteen_minute_data = \
+            add_stats.ema(five_or_fifteen_minute_data, ema_period)
+            
+        # Compute the 20-period low of the low prices
+        low_low = talib.MIN(five_or_fifteen_minute_data['Low'], timeperiod=20)
+        
+        # Compute the 10-period low of the low prices shifted forward by 1 period
+        shifted_low_low = \
+            talib.MIN(five_or_fifteen_minute_data['Low'].shift(1),\
+                      timeperiod=10)
+        
+        # Identify the lower low pattern by comparing the low_low values with the shifted_low_low values
+        lower_low_pattern = ((low_low < shifted_low_low) &\
+                             (five_or_fifteen_minute_data['Low'] < shifted_low_low)).astype(int)
+        
+        # Add the lower low pattern signal to the data
+        five_or_fifteen_minute_data['lower_low_pattern'] = lower_low_pattern
+        
+        # Filter the data to show only the bearish patterns
+        bearish_patterns = \
+            five_or_fifteen_minute_data[five_or_fifteen_minute_data['lower_low_pattern'] == 1]
+        # five_or_fifteen_minute_data['ll_pattern'] = \
+        #     talib.CDLLLAVAR(five_or_fifteen_minute_data['Open'],\
+        #                     five_or_fifteen_minute_data['High'],\
+        #                     five_or_fifteen_minute_data['Low'],\
+        #                     five_or_fifteen_minute_data['Close'])
 
         print("********************************************************************")
         print("Processing stock: ", ticker_name)
-        daily_data = data_reader.read(stock_file_name)
-        daily_data = add_stats.ATR(daily_data, atr_period)
-        daily_data = add_stats.beyond_ATR(daily_data)
-        stock_metadata[ticker_name] = daily_data
-        
-        for i in range(len(daily_data)):
-            if (daily_data['CanBuy'][i] == True):
-                buy_days[util.get_date(daily_data['Date'][i])] =\
-                    daily_data['Close'][i-1] + daily_data['ATR'][i]
-        
-        stock_file_name = file_prefix + ticker_name + "_" + str(num_months) + "_MONTH_" +\
-            num_minute_data + "_MINUTE_DATA.xlsx"
-        five_minute_data = data_reader.read(stock_file_name)
-        five_minute_data = add_stats.ema(five_minute_data, ema_period)
-        
-        longer_tf_file_name = file_prefix + ticker_name + "_" +\
-            str(num_months) + "_MONTH_60_MINUTE_DATA.xlsx"
-        longer_tf_data = data_reader.read(longer_tf_file_name)
-        longer_tf_data = add_stats.MACD(longer_tf_data, fast_ma_period, slow_ma_period, signal_period)
-        
-        five_minute_data['st'], five_minute_data['st_upt'], five_minute_data['st_dt'] = \
-            custom_strategy_util.get_supertrend(five_minute_data['High'], five_minute_data['Low'],
-                           five_minute_data['Close'], st_lookback_period, st_multiplier)
-        
-        five_minute_data = five_minute_data[1:]
-        
-        stock_buy_days[ticker_name] = buy_days
-        tickers_meta_data[ticker_name] = five_minute_data
-        
         transactions = pd.DataFrame(columns = ['Position', 'Buy Time', 'Buy Price', 'Sell Time', 'Sell Price',\
                                                'Pnl', 'Exit Method', 'Num Units', 'Current Capital(k)',\
                                                'Pnl %', 'Total Pnl%', 'Target Price'])
         total_pnl, num_buys, num_buy_wins, num_sells, num_sell_wins, capital, reserves,\
-            five_minute_data['Status'], five_minute_data['Signal'],\
+            five_or_fifteen_minute_data['Status'], five_or_fifteen_minute_data['Signal'],\
             transactions['Position'],\
             transactions['Buy Time'], transactions['Buy Price'], transactions['Sell Time'],\
             transactions['Sell Price'], transactions['Pnl'], transactions['Exit Method'],\
@@ -127,10 +135,13 @@ for ticker_id, ticker_name in test_dict3.items():
             transactions['Pnl %'], transactions['Total Pnl%'], transactions['Target Price'],\
             pnl_per_day_of_month_dict, monthly_cash_out_stats, monthly_pos_exit_stats_dict,\
             daily_pos_exit_stats_dict = \
-                custom_strategy_util.implement_strategy(five_minute_data, buy_sl_pct, buy_days,\
-                                                       ema_period, sell_sl_pct, longer_tf_data,\
-                                                       buy_allowed, sell_allowed, start_capital,\
-                                                       cash_out_limit)
+                ema_strategy_util.implement_strategy(five_or_fifteen_minute_data, buy_sl_pct,\
+                                                     ema_period, sell_sl_pct,\
+                                                     buy_allowed, sell_allowed,\
+                                                     start_capital, cash_out_limit,\
+                                                     start_execution_error_pct,\
+                                                     sl_buffer_pct,\
+                                                     price_per_lot, lot_size)
         
         stats = {}
         stats['Pnl'] = total_pnl
@@ -144,7 +155,7 @@ for ticker_id, ticker_name in test_dict3.items():
         stock_pnl[ticker_name] = total_pnl
         stock_capital[ticker_name] = capital
         stock_reserves[ticker_name] = reserves
-        stock_metadata[ticker_name] = five_minute_data
+        stock_metadata[ticker_name] = five_or_fifteen_minute_data
         stock_transactions[ticker_name] = transactions
         stock_monthly_cash_out_stats[ticker_name] = monthly_cash_out_stats
 
@@ -248,55 +259,4 @@ monthly_stats['TARGET BUY'] = num_buy_target_list
 monthly_stats['SL BUY'] = num_buy_sl_list
 monthly_stats['CUTOFF BUY'] = num_buy_cutoff_list
 
-# Post processing
-
-num_minute_data = "1"
-file_prefix = str(int(prev_num_years)) + "_YEAR_TICKER_DATA/"
-
-num_months = prev_num_years * 12
-file_prefix = str(int(prev_num_years)) + "_YEAR_TICKER_DATA/"
-stock_file_name = file_prefix + ticker_name + "_" + str(num_months) + "_MONTH_" +\
-    num_minute_data + "_MINUTE_DATA.xlsx"
-
-data = data_reader.read(stock_file_name)
-
-close_prices = data['Close']
-date = data['Date']
-high_prices = data['High']
-low_prices = data['Low']
-open_prices = data['Open']
-
-# big_candles_one_min_dict = {}
-# for i in range(len(data)):
-#     if (open_prices[i] < close_prices[i]):
-#         diff = close_prices[i] - open_prices[i]
-#         diff_pct = 100 * diff / open_prices[i]
-#         if (diff_pct >= 1.5):
-#             big_candles_one_min_dict[util.get_date_time(date[i])] = diff_pct
-            
-# sl_buy_times_dict = {}
-# for ticker_name, value in stock_transactions.items():
-#     buy_times = value["Buy Time"]
-#     exit_methods = value["Exit Method"]
-#     pnls = value["Pnl"]
-#     for i in range(len(value)):
-#         if (exit_methods[i] == "SL BUY"):
-#             sl_buy_times_dict[util.get_date_time(buy_times[i])] = pnls[i]
-            
-# ts_format = '%Y-%m-%dT%H:%M:%S'
-# ctr = 0
-# for sl_buy_time, pnl in sl_buy_times_dict.items():
-#     for minute in range(1, 5):
-#         probe_date_time = util.get_time_minutes_after_ts(sl_buy_time, minute)
-#         if (big_candles_one_min_dict.__contains__(probe_date_time)):
-#             print("Big candle: " + probe_date_time + " Movement: " +\
-#                   str(big_candles_one_min_dict[probe_date_time]) + " Expected loss: " + str(pnl))
-#             ctr += 1
-        
-        
-            
-        
-        
-
-        
         

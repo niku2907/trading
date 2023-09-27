@@ -6,13 +6,94 @@ Created on Fri Jul 23 18:08:48 2021
 @author: nishant.gupta
 """
 
+import math
+from datetime import date, datetime, timedelta
 
 class util:
+    def get_year(data):
+        # data = '2020-07-28T15:25:00'
+        return int(data.split('T')[0].split('-')[0])
+    
+    def get_month(data):
+        # data = '2020-07-28T15:25:00'
+        return int(data.split('T')[0].split('-')[1])
+    
+    def get_only_date(data):
+        # data = '2020-07-28T15:25:00'
+        return int(data.split('T')[0].split('-')[2])
+    
+    def get_date_object(data):
+        # data = '2020-07-28T15:25:00'
+        return date(util.get_year(data), util.get_month(data),\
+                    util.get_only_date(data))
+            
+    def get_last_day_date_object(data):
+        # data = '2020-07-28T15:25:00'
+        return util.get_date_object(data) - timedelta(days=1)
+    
+    def get_future_day_object(data, delta):
+        # data = '2020-07-28T15:25:00'
+        return util.get_date_object(data) + timedelta(days=delta)
+    
+    def get_past_day_object(data, delta):
+        # data = '2020-07-28T15:25:00'
+        return util.get_date_object(data) - timedelta(days=delta)
+        
+    def is_one_day_ahead(date1, date2):
+        # date1 should be the later one compared to date2
+        one_day = timedelta(days=1)
+        return date1 - date2 == one_day
+
+    def get_time_minutes_before_ts(ts, diff):
+        # ts = '2020-07-28T15:25:00'
+        ts_format = '%Y-%m-%dT%H:%M:%S'
+        date_time = datetime.strptime(ts, ts_format)
+        return (date_time - timedelta(minutes = diff)).strftime(ts_format)
+    
+    def get_time_minutes_after_ts(ts, diff):
+        # ts = '2020-07-28T15:25:00'
+        ts_format = '%Y-%m-%dT%H:%M:%S'
+        date_time = datetime.strptime(ts, ts_format)
+        return (date_time + timedelta(minutes = diff)).strftime(ts_format)
+        
+    def get_time_diff_minutes(ts1, ts2):
+        # ts1 = '2020-07-28T15:25:00+0530'
+        #print("TS1: " + ts1 + " TS2: " + ts2)
+        FMT = '%H:%M:%S'
+        tdelta = datetime.strptime(util.get_time(ts2), FMT) -\
+            datetime.strptime(util.get_time(ts1), FMT)
+        return math.floor(tdelta.seconds / 60)
+   
+    def get_last_month(data):
+        # data = '2017-08'
+        year = int(data.split('-')[0])
+        month = int(data.split('-')[1])
+        if month == 1:
+            month = 12
+            year = year - 1
+        else:
+            month = month - 1
+        return str(year) + '-' + "{0:0=2d}".format(month)
+    
+    def is_first_before_than_second(ts1, ts2):
+        # ts1 = '2020-07-28T15:25:00+0530'
+        # ts2 = '2020-07-29T15:25:00+0530'
+        date1_str = ts1.split('T')[0]
+        date2_str = ts2.split('T')[0]
+        date1 = datetime(int(date1_str.split('-')[0]),\
+                         int(date1_str.split('-')[1]),\
+                         int(date1_str.split('-')[2]))
+        date2 = datetime(int(date2_str.split('-')[0]),\
+                         int(date2_str.split('-')[1]),\
+                         int(date2_str.split('-')[2]))    
+        return date1 < date2
+        
     def get_date(data):
         # date = '2020-07-28T15:25:00+0530'
         return data.split('T')[0]
     
     def get_day_of_month(data):
+        #print("Data: " + str(data))
         return data.split('-')[2]
     
     def get_time(data):
